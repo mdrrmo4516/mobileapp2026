@@ -41,13 +41,41 @@ export function DashboardGrid() {
       label: "Report an Incident",
       onClick: () => setLocation("/report-incident")
     },
-    { icon: <CloudSun size={40} strokeWidth={1.5} />, label: "Weather Outlook" },
-    { icon: <Map size={40} strokeWidth={1.5} />, label: "Evacuation Plan" },
-    { icon: <ShieldAlert size={40} strokeWidth={1.5} />, label: "Disaster Plan" },
-    { icon: <Backpack size={40} strokeWidth={1.5} />, label: "Go Bag" },
-    { icon: <Wrench size={40} strokeWidth={1.5} />, label: "Emergency Tools" },
-    { icon: <FileText size={40} strokeWidth={1.5} />, label: "Public Documents" },
-    { icon: <GraduationCap size={40} strokeWidth={1.5} />, label: "Learning Materials" },
+    { 
+      icon: <CloudSun size={40} strokeWidth={1.5} />, 
+      label: "Weather Outlook",
+      onClick: () => setLocation("/weather-outlook")
+    },
+    { 
+      icon: <Map size={40} strokeWidth={1.5} />, 
+      label: "Evacuation Plan",
+      onClick: () => setLocation("/evacuation-plan")
+    },
+    { 
+      icon: <ShieldAlert size={40} strokeWidth={1.5} />, 
+      label: "Disaster Plan",
+      onClick: () => setLocation("/disaster-plan")
+    },
+    { 
+      icon: <Backpack size={40} strokeWidth={1.5} />, 
+      label: "Go Bag",
+      onClick: () => setLocation("/go-bag")
+    },
+    { 
+      icon: <Wrench size={40} strokeWidth={1.5} />, 
+      label: "Emergency Tools",
+      onClick: () => setLocation("/emergency-tools")
+    },
+    { 
+      icon: <FileText size={40} strokeWidth={1.5} />, 
+      label: "Public Documents",
+      onClick: () => setLocation("/public-documents")
+    },
+    { 
+      icon: <GraduationCap size={40} strokeWidth={1.5} />, 
+      label: "Learning Materials",
+      onClick: () => setLocation("/learning-materials")
+    },
   ];
 
   return (
