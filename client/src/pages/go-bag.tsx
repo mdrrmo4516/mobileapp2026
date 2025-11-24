@@ -38,7 +38,9 @@ export default function GoBag() {
           <span className="font-bold text-3xl">{progress}%</span>
           <span className="text-sm opacity-80 mb-1">Preparedness Level</span>
         </div>
-        <Progress value={progress} className="h-3 bg-white/20" indicatorClassName="bg-brand-yellow" />
+        <div className="h-3 bg-white/20 rounded-full overflow-hidden">
+          <div className="h-full bg-brand-yellow transition-all duration-300" style={{ width: `${progress}%` }}></div>
+        </div>
       </div>
 
       <main className="flex-1 overflow-y-auto p-4 pb-24 space-y-4">
