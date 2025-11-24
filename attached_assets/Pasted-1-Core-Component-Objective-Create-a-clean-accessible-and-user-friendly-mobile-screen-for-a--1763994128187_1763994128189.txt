@@ -1,0 +1,65 @@
+1. Core Component & Objective:
+
+Create a clean, accessible, and user-friendly mobile screen for a "Report an Incident" feature. The primary goal is to allow users to quickly and easily submit a report with all necessary details, even in a stressful situation. The design should prioritize clarity and a sense of progress.
+
+2. Key Features & Sections:
+
+Header: A clear title "Report an Incident" with a back button.
+
+Incident Type Selection: A scrollable horizontal list or a grid of tappable cards/icons for common incident types (e.g., Theft, Accident, Harassment, Fire, Medical Emergency, Hazard, Other). The selected state should be visually distinct.
+
+Date & Time Stamp: Pre-filled with the current date and time, but with an "Edit" button to allow for correction if the report is being made after the fact.
+
+Location:
+
+An auto-filled field using the device's GPS ("Current Location").
+
+A map preview (a small, static map component) showing the pinned location.
+
+An option to "Select Different Location" which would open a full-screen map.
+
+Description Field: A large, multi-line text input field with a placeholder: "Please provide a detailed description of what happened..." Use a character counter if there's a limit.
+
+Media Attachment:
+
+A clearly labeled section: "Add Photos or Video (Optional)".
+
+Use a "+" icon or a stylized "image" icon inside a dashed border card to represent the "Add" button.
+
+Show a thumbnail preview after a file is attached.
+
+Urgency/Privacy Toggle (Optional but recommended): A simple toggle or segmented control for "Priority: Low / High" or "Report Anonymously: Yes / No".
+
+Action Buttons: A persistent footer or a sticky section at the bottom with two buttons:
+
+Secondary Action: "Save as Draft" (less prominent, outlined style).
+
+Primary Action: "Submit Report" (high-contrast, filled style, placed on the right).
+
+3. User Flow & Micro-Interactions:
+
+The form should have a logical, single-column flow from top to bottom.
+
+Consider a progress indicator (e.g., "Step 1 of 2") if the report is multi-stage.
+
+Input fields should have clear validation states (error, success, default).
+
+Tapping "Submit" should trigger a loading state on the button before showing a success confirmation screen.
+
+4. Visual & UX Design Requirements:
+
+Style: Modern, clean, and calming. Avoid alarming colors like bright red; use a trusted primary color (blue, green) for the primary button.
+
+Accessibility: High contrast ratios, legible font sizes, and ample touch targets (minimum 44x44 pts). Support for dynamic type.
+
+Layout: Use standard mobile UI patterns (iOS Human Interface Guidelines / Material Design 3). Ensure critical buttons are within easy thumb reach.
+
+Typography: Clear hierarchy with a bold title, medium-weight section headers, and readable body text.
+
+5. Technical Considerations (for context):
+
+The component should be built with a responsive mobile-first framework 
+
+State management for form data, location services, and file uploads should be considered.
+
+The map component should be a lightweight, embedded SDK (like Google Maps Static API for the preview).

@@ -1,3 +1,4 @@
+import { useLocation } from "wouter";
 import { 
   Megaphone, 
   CloudSun, 
@@ -19,7 +20,7 @@ function DashboardButton({ icon, label, onClick }: DashboardButtonProps) {
   return (
     <button 
       onClick={onClick}
-      className="flex flex-col items-center justify-center bg-white rounded-xl p-4 shadow-[0_4px_0_0_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-[4px] transition-all border-2 border-brand-yellow h-32 w-full group"
+      className="flex flex-col items-center justify-center bg-white rounded-xl p-4 shadow-[0_4px_0_0_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-[4px] transition-all border-2 border-brand-yellow h-32 w-full group cursor-pointer"
     >
       <div className="text-brand-blue mb-2 transform group-hover:scale-110 transition-transform duration-200">
         {icon}
@@ -32,11 +33,17 @@ function DashboardButton({ icon, label, onClick }: DashboardButtonProps) {
 }
 
 export function DashboardGrid() {
+  const [, setLocation] = useLocation();
+
   const buttons = [
-    { icon: <Megaphone size={40} strokeWidth={1.5} />, label: "Report an Incident" },
+    { 
+      icon: <Megaphone size={40} strokeWidth={1.5} />, 
+      label: "Report an Incident",
+      onClick: () => setLocation("/report-incident")
+    },
     { icon: <CloudSun size={40} strokeWidth={1.5} />, label: "Weather Outlook" },
     { icon: <Map size={40} strokeWidth={1.5} />, label: "Evacuation Plan" },
-    { icon: <ShieldAlert size={40} strokeWidth={1.5} />, label: "Disaster Plan" }, // Changed to ShieldAlert
+    { icon: <ShieldAlert size={40} strokeWidth={1.5} />, label: "Disaster Plan" },
     { icon: <Backpack size={40} strokeWidth={1.5} />, label: "Go Bag" },
     { icon: <Wrench size={40} strokeWidth={1.5} />, label: "Emergency Tools" },
     { icon: <FileText size={40} strokeWidth={1.5} />, label: "Public Documents" },
@@ -50,6 +57,7 @@ export function DashboardGrid() {
           key={index} 
           icon={btn.icon} 
           label={btn.label} 
+          onClick={btn.onClick}
         />
       ))}
     </div>
