@@ -5,32 +5,23 @@ import {
   MapPin, 
   Calendar, 
   Clock, 
-  Image as ImageIcon, 
-  Plus, 
-  AlertTriangle,
-  Flame,
-  Car,
-  Stethoscope,
-  Zap,
-  MoreHorizontal,
-  Shield,
-  CheckCircle2
+  Plus
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 
 const INCIDENT_TYPES = [
-  { id: "theft", label: "Theft", icon: <Shield /> },
-  { id: "accident", label: "Accident", icon: <Car /> },
-  { id: "harassment", label: "Harassment", icon: <AlertTriangle /> },
-  { id: "fire", label: "Fire", icon: <Flame /> },
-  { id: "medical", label: "Medical", icon: <Stethoscope /> },
-  { id: "hazard", label: "Hazard", icon: <Zap /> },
-  { id: "other", label: "Other", icon: <MoreHorizontal /> },
+  { id: "fire", label: "Fire" },
+  { id: "flood", label: "Flood" },
+  { id: "landslide", label: "Landslide" },
+  { id: "vehicular-accident", label: "Vehicular Accident" },
+  { id: "medical-emergency", label: "Medical Emergency" },
+  { id: "earthquake", label: "Earthquake" },
 ];
 
 export default function ReportIncident() {
@@ -101,27 +92,25 @@ export default function ReportIncident() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <section className="space-y-3">
             <Label className="text-brand-blue font-bold text-sm uppercase tracking-wider">Incident Type</Label>
-            <div className="grid grid-cols-3 gap-3">
-              {INCIDENT_TYPES.map((type) => (
-                <button
-                  key={type.id}
-                  type="button"
-                  onClick={() => setSelectedType(type.id)}
-                  className={`
-                    flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all gap-2
-                    ${selectedType === type.id 
-                      ? "border-brand-yellow bg-brand-yellow/10 text-brand-blue shadow-sm" 
-                      : "border-slate-200 bg-white text-slate-500 hover:border-brand-blue/30 hover:bg-slate-50"}
-                  `}
-                  data-testid={`button-incident-type-${type.id}`}
-                >
-                  <div className={`${selectedType === type.id ? "text-brand-blue" : "text-slate-400"}`}>
-                    {type.icon}
-                  </div>
-                  <span className="text-xs font-bold text-center">{type.label}</span>
-                </button>
-              ))}
-            </div>
+            <Select value={selectedType || ""} onValueChange={setSelectedType}>
+              <SelectTrigger 
+                className="w-full h-12 bg-white border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
+                data-testid="select-incident-type"
+              >
+                <SelectValue placeholder="Select incident type" />
+              </SelectTrigger>
+              <SelectContent>
+                {INCIDENT_TYPES.map((type) => (
+                  <SelectItem 
+                    key={type.id} 
+                    value={type.id}
+                    data-testid={`option-incident-type-${type.id}`}
+                  >
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </section>
 
           <section className="space-y-3">
