@@ -91,7 +91,7 @@ export default function GoBag() {
 
   const handleCallMDRRMO = () => {
     // Replace with actual emergency number
-    window.open('tel:+1234567890');
+    window.open('tel:+09177725016');
   };
 
   const handleShare = async () => {

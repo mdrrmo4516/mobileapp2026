@@ -89,7 +89,7 @@ export function HotlineDrawerContent() {
   return (
     <DrawerContent className="max-h-[85vh]">
       <DrawerHeader>
-        <DrawerTitle className="text-center text-2xl font-bold text-brand-blue uppercase">Emergency Hotlines</DrawerTitle>
+        <DrawerTitle className="text-center text-2xl font-bold text-brand-yellow uppercase">Emergency Hotlines</DrawerTitle>
         <DrawerDescription className="text-center">Tap any number to dial immediately</DrawerDescription>
       </DrawerHeader>
       

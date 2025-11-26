@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-brand-blue flex flex-col max-w-md mx-auto shadow-2xl overflow-hidden relative">
       {/* Texture Overlay */}
-      <div className="absolute inset-0 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/concrete-wall.png')] opacity-20 mix-blend-overlay z-0"></div>
+      <div className="absolute inset-0 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/concrete-wall.png')] mix-blend-overlay z-0"></div>
       
       <Header />
       

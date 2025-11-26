@@ -1,11 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { X, RefreshCw, Cloud, Sun, Droplets, Wind, ArrowLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-type AlertLevel = 'normal' | 'yellow' | 'orange' | 'red' | 'violet';
+const API_KEY = "bb0b8b639634c8a7a6c9faee7dca96e5";
+const LAT = 13.0293;
+const LON = 123.445;
+const LOCATION_NAME = "Pio Duran, PH";
+
+type AlertLevel = "normal" | "yellow" | "orange" | "red" | "violet";
 type WeatherData = {
-  location: { city: string; province: string; lat: number; lng: number };
+  location: { name: string; lat: number; lng: number };
   current: {
     temp: number;
     feelsLike: number;
@@ -14,6 +21,7 @@ type WeatherData = {
     windDirection: string;
     condition: string;
     heatIndex: number;
+    icon: string;
   };
   forecast: Array<{
     day: string;
@@ -22,520 +30,677 @@ type WeatherData = {
     low: number;
     icon: string;
   }>;
-  cyclone: {
-    active: boolean;
-    name: string;
-    distance: number;
-    intensity: string;
-  };
   alerts: {
     rainfall: AlertLevel;
     heat: boolean;
   };
-  satelliteUrl: string;
 };
 
 const weatherIcons: Record<string, string> = {
-  'partly-cloudy': '⛅',
-  'sunny': '☀️',
-  'rainy': '🌧️',
-  'storm': '⛈️',
-  'cloudy': '☁️'
+  "01d": "☀️",
+  "01n": "🌙",
+  "02d": "⛅",
+  "02n": "☁️",
+  "03d": "☁️",
+  "03n": "☁️",
+  "04d": "☁️",
+  "04n": "☁️",
+  "09d": "🌧️",
+  "09n": "🌧️",
+  "10d": "🌦️",
+  "10n": "🌧️",
+  "11d": "⛈️",
+  "11n": "⛈️",
+  "13d": "❄️",
+  "13n": "❄️",
+  "50d": "🌫️",
+  "50n": "🌫️",
 };
 
-const alertConfig: Record<AlertLevel, { color: string; label: string; icon: string }> = {
-  normal: { color: '#10B981', label: 'Normal', icon: '🟢' },
-  yellow: { color: '#EAB308', label: 'Heavy Rainfall Watch', icon: '🟡' },
-  orange: { color: '#F97316', label: 'Heavy Rainfall Warning', icon: '🟠' },
-  red: { color: '#EF4444', label: 'Severe Warning', icon: '🔴' },
-  violet: { color: '#8B5CF6', label: 'Extreme Emergency', icon: '🟣' }
+const alertConfig: Record<
+  AlertLevel,
+  { color: string; label: string; icon: string }
+> = {
+  normal: { color: "#10B981", label: "Normal", icon: "🟢" },
+  yellow: { color: "#EAB308", label: "Heavy Rainfall Watch", icon: "🟡" },
+  orange: { color: "#F97316", label: "Heavy Rainfall Warning", icon: "🟠" },
+  red: { color: "#EF4444", label: "Severe Warning", icon: "🔴" },
+  violet: { color: "#8B5CF6", label: "Extreme Emergency", icon: "🟣" },
 };
 
 const WeatherOutlook = () => {
-  const [location, setLocation] = useState<{ city: string; province: string; lat: number; lng: number } | null>(null);
+  const [, setLocation] = useLocation();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [satelliteImage, setSatelliteImage] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleBack = () => {
+    setLocation("/");
+  };
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    const init = async () => {
-      const cached = localStorage.getItem('weatherData');
-      if (cached) {
-        setWeatherData(JSON.parse(cached));
-        setLoading(false);
-      }
-      
-      await getCurrentLocation();
-    };
-    
-    init();
-    
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    fetchData();
+
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
-  useEffect(() => {
-    if (location) {
-      fetchWeatherData();
+  const fetchData = async () => {
+    if (!isOnline) {
+      setError("No internet connection");
+      setLoading(false);
+      return;
     }
-  }, [location]);
 
-  useEffect(() => {
-    const fetchSatellite = () => {
-      const timestamp = new Date().getTime();
-      setSatelliteImage(`http://src.meteopilipinas.gov.ph/repo/mtsat-colored/24hour/latest-him-colored.gif?t=${timestamp}`);
-    };
-
-    fetchSatellite();
-    const interval = setInterval(fetchSatellite, 30 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (showAlert) {
-      const timer = setTimeout(() => {
-        setShowAlert(false);
-      }, 30000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [showAlert]);
-
-  const getCurrentLocation = async () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            city: 'Manila',
-            province: 'Metro Manila',
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.log('Location error:', error);
-          setLocation({
-            city: 'Manila',
-            province: 'Metro Manila',
-            lat: 14.5995,
-            lng: 120.9842
-          });
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-      );
-    } else {
-      setLocation({
-        city: 'Manila',
-        province: 'Metro Manila',
-        lat: 14.5995,
-        lng: 120.9842
-      });
-    }
-  };
-
-  const getWindDirection = (deg: number): string => {
-    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-    const index = Math.round(((deg % 360) / 45)) % 8;
-    return directions[index];
-  };
-
-  const getWeatherIcon = (weatherId: number): string => {
-    if (weatherId >= 200 && weatherId < 300) return 'storm';
-    if (weatherId >= 300 && weatherId < 600) return 'rainy';
-    if (weatherId >= 600 && weatherId < 700) return 'rainy';
-    if (weatherId === 800) return 'sunny';
-    if (weatherId > 800) return 'cloudy';
-    return 'partly-cloudy';
-  };
-
-  const calculateHeatIndex = (temp: number, humidity: number): number => {
-    const T = temp;
-    const RH = humidity;
-    
-    if (T < 27) return T;
-    
-    const HI = -8.78469475556 +
-      1.61139411 * T +
-      2.33854883889 * RH +
-      -0.14611605 * T * RH +
-      -0.012308094 * T * T +
-      -0.0164248277778 * RH * RH +
-      0.002211732 * T * T * RH +
-      0.00072546 * T * RH * RH +
-      -0.000003582 * T * T * RH * RH;
-    
-    return Math.round(HI);
-  };
-
-  const determineRainfallAlert = (weatherId: number): AlertLevel => {
-    if (weatherId >= 200 && weatherId < 300) return 'red';
-    if (weatherId >= 500 && weatherId < 600) {
-      if (weatherId >= 502 && weatherId <= 504) return 'orange';
-      if (weatherId === 501) return 'yellow';
-    }
-    return 'normal';
-  };
-
-  const fetchWeatherData = async () => {
-    if (!location) return;
-    
     setLoading(true);
-    try {
-      const [currentResponse, forecastResponse] = await Promise.all([
-        fetch(`/api/weather/current?lat=${location.lat}&lon=${location.lng}`),
-        fetch(`/api/weather/forecast?lat=${location.lat}&lon=${location.lng}`)
-      ]);
+    setError(null);
 
-      if (!currentResponse.ok || !forecastResponse.ok) {
-        throw new Error('Failed to fetch weather data');
+    try {
+      // Fetch current weather
+      const currentResponse = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`,
+      );
+
+      if (!currentResponse.ok) {
+        throw new Error("Failed to fetch current weather data");
       }
 
       const currentData = await currentResponse.json();
-      const forecastData = await forecastResponse.json();
 
-      const heatIndex = calculateHeatIndex(
-        Math.round(currentData.main.temp),
-        currentData.main.humidity
+      // Fetch forecast
+      const forecastResponse = await fetch(
+        `https://api.openweathermap.org/data/2.5/forecast?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`,
       );
 
-      const rainfallAlert = determineRainfallAlert(currentData.weather[0].id);
-
-      const dailyForecasts = [];
-      const processedDates = new Set<string>();
-      
-      for (const item of forecastData.list) {
-        const date = new Date(item.dt * 1000);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        if (!processedDates.has(dateStr) && processedDates.size < 5) {
-          processedDates.add(dateStr);
-          const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-          
-          const dayItems = forecastData.list.filter((i: any) => {
-            const d = new Date(i.dt * 1000).toISOString().split('T')[0];
-            return d === dateStr;
-          });
-          
-          const temps = dayItems.map((i: any) => i.main.temp);
-          const high = Math.round(Math.max(...temps));
-          const low = Math.round(Math.min(...temps));
-          
-          dailyForecasts.push({
-            day: dayName,
-            date: dateStr,
-            high,
-            low,
-            icon: getWeatherIcon(item.weather[0].id)
-          });
-        }
+      if (!forecastResponse.ok) {
+        throw new Error("Failed to fetch forecast data");
       }
 
-      const newWeatherData: WeatherData = {
-        location: {
-          city: currentData.name || location.city,
-          province: location.province,
-          lat: location.lat,
-          lng: location.lng
-        },
-        current: {
-          temp: Math.round(currentData.main.temp),
-          feelsLike: Math.round(currentData.main.feels_like),
-          humidity: currentData.main.humidity,
-          windSpeed: Math.round(currentData.wind.speed * 3.6),
-          windDirection: getWindDirection(currentData.wind.deg),
-          condition: currentData.weather[0].description,
-          heatIndex
-        },
-        forecast: dailyForecasts,
-        cyclone: {
-          active: false,
-          name: '',
-          distance: 0,
-          intensity: ''
-        },
-        alerts: {
-          rainfall: rainfallAlert,
-          heat: heatIndex >= 38
-        },
-        satelliteUrl: satelliteImage || ''
-      };
+      const forecastData = await forecastResponse.json();
 
-      setWeatherData(newWeatherData);
+      // Process data
+      const processedData: WeatherData = processWeatherData(
+        currentData,
+        forecastData,
+      );
+      setWeatherData(processedData);
       setLastUpdated(new Date());
-      localStorage.setItem('weatherData', JSON.stringify(newWeatherData));
-    } catch (error) {
-      console.error('Error fetching weather data:', error);
-      
-      const cached = localStorage.getItem('weatherData');
-      if (!cached && !weatherData) {
-        const fallbackData: WeatherData = {
-          location: location!,
-          current: {
-            temp: 32,
-            feelsLike: 38,
-            humidity: 78,
-            windSpeed: 15,
-            windDirection: 'NE',
-            condition: 'Unable to fetch weather data',
-            heatIndex: 41
-          },
-          forecast: [],
-          cyclone: { active: false, name: '', distance: 0, intensity: '' },
-          alerts: { rainfall: 'normal', heat: false },
-          satelliteUrl: satelliteImage || ''
-        };
-        setWeatherData(fallbackData);
-      }
+    } catch (err) {
+      console.error("Error fetching weather data:", err);
+      setError("Failed to load weather data. Please try again later.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
+
+  const processWeatherData = (current: any, forecast: any): WeatherData => {
+    // Process current weather
+    const currentTemp = Math.round(current.main.temp);
+    const feelsLike = Math.round(current.main.feels_like);
+    const humidity = current.main.humidity;
+    const windSpeed = Math.round(current.wind.speed * 3.6); // Convert m/s to km/h
+    const windDeg = current.wind.deg;
+    const condition = current.weather[0].description;
+    const icon = current.weather[0].icon;
+
+    // Calculate wind direction
+    const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    const index = Math.round(windDeg / 45) % 8;
+    const windDirection = directions[index];
+
+    // Simple heat index calculation (approximation)
+    const heatIndex = Math.round(
+      currentTemp +
+        0.33 *
+          (humidity / 100) *
+          6.105 *
+          Math.exp((17.27 * currentTemp) / (237.7 + currentTemp)) -
+        4.25,
+    );
+
+    // Process forecast
+    const dailyForecasts: Record<string, any[]> = {};
+
+    forecast.list.forEach((item: any) => {
+      const date = new Date(item.dt * 1000);
+      const dayKey = date.toISOString().split("T")[0];
+
+      if (!dailyForecasts[dayKey]) {
+        dailyForecasts[dayKey] = [];
+      }
+      dailyForecasts[dayKey].push(item);
+    });
+
+    const forecastArray = Object.keys(dailyForecasts)
+      .slice(0, 5)
+      .map((date) => {
+        const dayData = dailyForecasts[date];
+        const day = new Date(date).toLocaleDateString("en-US", {
+          weekday: "short",
+        });
+        const high = Math.round(
+          Math.max(...dayData.map((d: any) => d.main.temp_max)),
+        );
+        const low = Math.round(
+          Math.min(...dayData.map((d: any) => d.main.temp_min)),
+        );
+        const icon = dayData[0].weather[0].icon;
+
+        return {
+          day,
+          date,
+          high,
+          low,
+          icon,
+        };
+      });
+
+    // Determine alert level based on conditions
+    let rainfallAlert: AlertLevel = "normal";
+    if (
+      current.weather[0].main === "Rain" ||
+      current.weather[0].main === "Thunderstorm"
+    ) {
+      rainfallAlert = "orange";
+    }
+
+    const heatAlert = heatIndex > 38;
+
+    return {
+      location: {
+        name: LOCATION_NAME,
+        lat: LAT,
+        lng: LON,
+      },
+      current: {
+        temp: currentTemp,
+        feelsLike,
+        humidity,
+        windSpeed,
+        windDirection,
+        condition,
+        heatIndex,
+        icon,
+      },
+      forecast: forecastArray,
+      alerts: {
+        rainfall: rainfallAlert,
+        heat: heatAlert,
+      },
+    };
+  };
+
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchWeatherData();
+    fetchData();
   };
 
   const getSafetyTips = () => {
     const tips = [];
     if (weatherData?.alerts.heat) {
-      tips.push('Stay hydrated', 'Limit outdoor activities', 'Wear light clothing');
+      tips.push(
+        "Stay hydrated",
+        "Limit outdoor activities",
+        "Wear light clothing",
+      );
     }
-    if (weatherData?.alerts.rainfall !== 'normal') {
-      tips.push('Avoid flood-prone areas', 'Prepare emergency kit', 'Monitor updates');
+    if (weatherData?.alerts.rainfall !== "normal") {
+      tips.push(
+        "Avoid flood-prone areas",
+        "Prepare emergency kit",
+        "Monitor updates",
+      );
     }
     return tips;
   };
 
   if (loading && !weatherData) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300" data-testid="text-loading">Loading weather data...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center"
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="mx-auto mb-4"
+          >
+            <Cloud className="h-12 w-12 text-white" />
+          </motion.div>
+          <motion.p
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="text-white text-lg font-medium"
+            data-testid="text-loading"
+          >
+            Loading weather data...
+          </motion.p>
+        </motion.div>
       </div>
     );
   }
 
   const alert = weatherData?.alerts.rainfall;
-  const config = alert && alert !== 'normal' ? alertConfig[alert] : null;
+  const config = alert && alert !== "normal" ? alertConfig[alert] : null;
   const safetyTips = getSafetyTips();
-  
-  let heatIndexLevel = '';
+
+  let heatIndexLevel = "";
   const heatIndex = weatherData?.current.heatIndex || 0;
-  if (heatIndex >= 41) heatIndexLevel = 'Extreme Caution';
-  else if (heatIndex >= 38) heatIndexLevel = 'Danger';
-  else if (heatIndex >= 32) heatIndexLevel = 'Caution';
-  else heatIndexLevel = 'Normal';
+  if (heatIndex >= 41) heatIndexLevel = "Extreme Caution";
+  else if (heatIndex >= 38) heatIndexLevel = "Danger";
+  else if (heatIndex >= 32) heatIndexLevel = "Caution";
+  else heatIndexLevel = "Normal";
+
+  // Get background gradient based on weather condition
+  const getBackgroundGradient = () => {
+    if (!weatherData) return "from-blue-400 via-purple-500 to-pink-500";
+
+    const condition = weatherData.current.condition.toLowerCase();
+    if (condition.includes("rain")) return "from-blue-500 via-blue-600 to-indigo-700";
+    if (condition.includes("clear")) return "from-yellow-400 via-orange-500 to-red-500";
+    if (condition.includes("cloud")) return "from-gray-400 via-gray-500 to-gray-600";
+    if (condition.includes("thunder")) return "from-gray-700 via-gray-800 to-black";
+    return "from-blue-400 via-purple-500 to-pink-500";
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 px-4 py-6 shadow-sm">
+    <div className={`min-h-screen bg-gradient-to-br ${getBackgroundGradient()} transition-all duration-1000`}>
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* Header */}
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white/20 backdrop-blur-lg rounded-2xl p-4 mb-6 shadow-xl border border-white/30"
+        >
           <div className="flex justify-between items-start mb-3">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-city">
-                {location?.city || 'Manila'}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400" data-testid="text-province">
-                {location?.province || 'Metro Manila'}
-              </p>
+            <div className="flex items-center gap-3">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleBack}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                data-testid="button-back"
+              >
+                <ArrowLeft size={24} className="text-white" />
+              </motion.button>
+              <div>
+                <motion.h1
+                  initial={{ x: -20 }}
+                  animate={{ x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-2xl font-bold text-white"
+                  data-testid="text-city"
+                >
+                  {weatherData?.location.name || LOCATION_NAME}
+                </motion.h1>
+              <motion.p
+                initial={{ x: -20 }}
+                animate={{ x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-white/80"
+                data-testid="text-coordinates"
+              >
+                {LAT.toFixed(4)}°N, {LON.toFixed(4)}°E
+              </motion.p>
+              </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-blue-600 dark:text-blue-400"
-              data-testid="button-edit-location"
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
             >
-              Edit
-            </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/20"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                data-testid="button-refresh-header"
+              >
+                <RefreshCw
+                  className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+                />
+              </Button>
+            </motion.div>
           </div>
-          <div className="flex items-center gap-2">
-            <div 
-              className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="flex items-center gap-2"
+          >
+            <div
+              className={`w-3 h-3 rounded-full ${isOnline ? "bg-green-400" : "bg-red-400"} animate-pulse`}
               data-testid="indicator-online-status"
             />
-            <span className="text-sm text-gray-600 dark:text-gray-400" data-testid="text-online-status">
-              {isOnline ? 'Online' : 'Offline'}
-            </span>
-          </div>
-        </div>
-
-        <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 150px)' }}>
-          {config && showAlert && (
-            <div 
-              className="p-3 rounded-lg flex items-center justify-between animate-pulse" 
-              style={{ backgroundColor: config.color + '20' }}
-              data-testid="banner-alert"
+            <span
+              className="text-sm text-white/90"
+              data-testid="text-online-status"
             >
-              <div className="flex-1">
-                <p className="text-center font-semibold" style={{ color: config.color }}>
-                  {config.icon} {config.label}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowAlert(false)}
-                className="ml-2 p-1 hover:opacity-70 transition-opacity"
-                style={{ color: config.color }}
-                data-testid="button-close-alert"
-              >
-                <X size={20} />
-              </button>
-            </div>
+              {isOnline ? "Online" : "Offline"}
+            </span>
+            {lastUpdated && (
+              <span className="text-sm text-white/70 ml-2">
+                Updated:{" "}
+                {lastUpdated.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            )}
+          </motion.div>
+        </motion.div>
+
+        <div className="space-y-6">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 bg-red-500/20 backdrop-blur-sm rounded-2xl text-white border border-red-300/30"
+            >
+              {error}
+            </motion.div>
           )}
+
+          <AnimatePresence>
+            {config && showAlert && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="p-4 rounded-2xl flex items-center justify-between animate-pulse backdrop-blur-sm"
+                style={{ backgroundColor: config.color + "30" }}
+                data-testid="banner-alert"
+              >
+                <div className="flex-1">
+                  <p
+                    className="text-center font-bold text-lg"
+                    style={{ color: config.color }}
+                  >
+                    {config.icon} {config.label}
+                  </p>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowAlert(false)}
+                  className="ml-2 p-1 hover:opacity-70 transition-opacity rounded-full"
+                  style={{ color: config.color, backgroundColor: config.color + "20" }}
+                  data-testid="button-close-alert"
+                >
+                  <X size={20} />
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {weatherData && (
             <>
-              <Card className="p-4" data-testid="card-current-weather">
-                <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Today's Weather</h2>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🌡️</span>
-                    <span className="text-lg font-semibold text-gray-900 dark:text-white flex-1" data-testid="text-temp">
-                      {weatherData.current.temp}°C
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400" data-testid="text-feels-like">
-                      Feels like {weatherData.current.feelsLike}°C
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">💨</span>
-                    <span className="text-lg font-semibold text-gray-900 dark:text-white flex-1" data-testid="text-wind-speed">
-                      {weatherData.current.windSpeed} km/h
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400" data-testid="text-wind-direction">
-                      {weatherData.current.windDirection}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">💧</span>
-                    <span className="text-lg font-semibold text-gray-900 dark:text-white flex-1" data-testid="text-humidity">
-                      {weatherData.current.humidity}%
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Humidity</span>
-                  </div>
-                  <div className="pt-2">
-                    <p className="text-gray-700 dark:text-gray-300 capitalize" data-testid="text-condition">
-                      {weatherData.current.condition}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-4" data-testid="card-forecast">
-                <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">5-Day Forecast</h2>
-                <div className="flex gap-4 overflow-x-auto pb-2">
-                  {weatherData.forecast.map((day, index) => (
-                    <div 
-                      key={index} 
-                      className="flex flex-col items-center min-w-[80px]"
-                      data-testid={`forecast-day-${index}`}
-                    >
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{day.day}</p>
-                      <span className="text-2xl mb-2">{weatherIcons[day.icon] || '🌤️'}</span>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{day.high}°</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{day.low}°</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="p-4" data-testid="card-heat-index">
-                <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Heat Index & Safety</h2>
-                <div className="mb-3">
-                  <p className="text-lg text-gray-900 dark:text-white">
-                    🔥 Heat Index: <span className="font-bold" data-testid="text-heat-index">{weatherData.current.heatIndex}°C</span>
-                  </p>
-                  <p className="text-red-500 font-semibold mt-1" data-testid="text-heat-level">{heatIndexLevel}</p>
-                </div>
-                {safetyTips.length > 0 && (
-                  <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <p className="font-semibold text-gray-900 dark:text-white mb-2">⚠️ Safety Tips:</p>
-                    {safetyTips.map((tip, index) => (
-                      <p key={index} className="text-sm text-gray-700 dark:text-gray-300 ml-2 mb-1" data-testid={`safety-tip-${index}`}>
-                        • {tip}
+              {/* Current Weather Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <Card className="p-6 bg-white/20 backdrop-blur-lg rounded-3xl shadow-xl border border-white/30">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="text-xl font-bold text-white mb-1">Current Weather</h2>
+                      <motion.p 
+                        className="text-6xl font-bold text-white mb-2"
+                        initial={{ scale: 0.9 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                      >
+                        {weatherData.current.temp}°
+                      </motion.p>
+                      <p className="text-white/90 capitalize text-lg">
+                        {weatherData.current.condition}
                       </p>
-                    ))}
+                    </div>
+                    <motion.div 
+                      className="text-7xl"
+                      initial={{ rotate: -10 }}
+                      animate={{ rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 200 }}
+                    >
+                      {weatherIcons[weatherData.current.icon] || "🌤️"}
+                    </motion.div>
                   </div>
-                )}
-              </Card>
 
-              {weatherData.cyclone.active && (
-                <Card className="p-4" data-testid="card-cyclone">
-                  <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">🌀 Tropical Cyclone Alert</h2>
-                  <div className="mb-4">
-                    <p className="text-lg font-bold text-red-500 mb-2" data-testid="text-cyclone-name">
-                      {weatherData.cyclone.name}
-                    </p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300" data-testid="text-cyclone-intensity">
-                      Intensity: {weatherData.cyclone.intensity}
-                    </p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300" data-testid="text-cyclone-distance">
-                      Distance: {weatherData.cyclone.distance} km from coast
-                    </p>
-                  </div>
-                  <div className="w-full h-[480px] rounded-lg overflow-hidden">
-                    <iframe 
-                      src="https://www.google.com/maps/d/embed?mid=1TSspiHSYVJinJHVDOsGicr74ERNCei0&ehbc=2E312F" 
-                      width="100%" 
-                      height="480"
-                      className="border-0"
-                      data-testid="iframe-map"
-                    />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                    <motion.div 
+                      className="flex items-center bg-white/20 p-3 rounded-2xl backdrop-blur-sm"
+                      whileHover={{ scale: 1.03 }}
+                    >
+                      <Sun className="h-8 w-8 text-yellow-300 mr-3" />
+                      <div>
+                        <p className="text-white/80 text-sm">Feels Like</p>
+                        <p className="font-bold text-white text-lg">
+                          {weatherData.current.feelsLike}°
+                        </p>
+                      </div>
+                    </motion.div>
+
+                    <motion.div 
+                      className="flex items-center bg-white/20 p-3 rounded-2xl backdrop-blur-sm"
+                      whileHover={{ scale: 1.03 }}
+                    >
+                      <Wind className="h-8 w-8 text-blue-300 mr-3" />
+                      <div>
+                        <p className="text-white/80 text-sm">Wind</p>
+                        <p className="font-bold text-white text-lg">
+                          {weatherData.current.windSpeed} km/h
+                        </p>
+                      </div>
+                    </motion.div>
+
+                    <motion.div 
+                      className="flex items-center bg-white/20 p-3 rounded-2xl backdrop-blur-sm"
+                      whileHover={{ scale: 1.03 }}
+                    >
+                      <Droplets className="h-8 w-8 text-cyan-300 mr-3" />
+                      <div>
+                        <p className="text-white/80 text-sm">Humidity</p>
+                        <p className="font-bold text-white text-lg">
+                          {weatherData.current.humidity}%
+                        </p>
+                      </div>
+                    </motion.div>
+
+                    <motion.div 
+                      className="flex items-center bg-white/20 p-3 rounded-2xl backdrop-blur-sm"
+                      whileHover={{ scale: 1.03 }}
+                    >
+                      <Cloud className="h-8 w-8 text-orange-300 mr-3" />
+                      <div>
+                        <p className="text-white/80 text-sm">Heat Index</p>
+                        <p className="font-bold text-white text-lg">
+                          {weatherData.current.heatIndex}°
+                        </p>
+                      </div>
+                    </motion.div>
                   </div>
                 </Card>
-              )}
+              </motion.div>
 
-              <Card className="p-4" data-testid="card-satellite">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">🛰️ Satellite Imagery</h2>
-                  {lastUpdated && (
-                    <p className="text-xs text-gray-600 dark:text-gray-400" data-testid="text-last-updated">
-                      Updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  )}
-                </div>
-                {satelliteImage ? (
-                  <img 
-                    src={satelliteImage} 
-                    alt="Satellite imagery"
-                    className="w-full h-[250px] object-contain rounded-lg bg-gray-100 dark:bg-gray-700"
-                    data-testid="img-satellite"
-                  />
-                ) : (
-                  <div className="h-[250px] flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">Loading satellite image...</p>
+              {/* Forecast Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card className="p-6 bg-white/20 backdrop-blur-lg rounded-3xl shadow-xl border border-white/30" data-testid="card-forecast">
+                  <h2 className="text-xl font-bold text-white mb-4">5-Day Forecast</h2>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {weatherData.forecast.map((day, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 * index }}
+                        whileHover={{ y: -10 }}
+                        className="flex flex-col items-center min-w-[85px] p-4 rounded-2xl bg-white/20 backdrop-blur-sm"
+                        data-testid={`forecast-day-${index}`}
+                      >
+                        <p className="text-white font-bold mb-2">{day.day}</p>
+                        <span className="text-4xl mb-3">
+                          {weatherIcons[day.icon] || "🌤️"}
+                        </span>
+                        <div className="flex flex-col items-center">
+                          <p className="text-white font-bold text-xl">{day.high}°</p>
+                          <p className="text-white/70">{day.low}°</p>
+                        </div>
+                      </motion.div>
+                    ))}
                   </div>
-                )}
-              </Card>
+                </Card>
+              </motion.div>
+
+              {/* Heat Index & Safety Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="p-6 bg-white/20 backdrop-blur-lg rounded-3xl shadow-xl border border-white/30" data-testid="card-heat-index">
+                  <h2 className="text-xl font-bold text-white mb-4">Heat Index & Safety</h2>
+                  <div className="mb-4">
+                    <p className="text-white text-lg flex items-center">
+                      <Sun className="h-6 w-6 text-yellow-300 mr-2" />
+                      Heat Index:{" "}
+                      <span className="font-bold ml-2" data-testid="text-heat-index">
+                        {weatherData.current.heatIndex}°C
+                      </span>
+                    </p>
+                    <motion.p
+                      className={`font-bold mt-2 text-lg ${
+                        heatIndexLevel === "Danger" 
+                          ? "text-red-300" 
+                          : heatIndexLevel === "Caution" 
+                          ? "text-orange-300" 
+                          : heatIndexLevel === "Extreme Caution" 
+                          ? "text-red-400" 
+                          : "text-green-300"
+                      }`}
+                      data-testid="text-heat-level"
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      {heatIndexLevel}
+                    </motion.p>
+                  </div>
+                  {safetyTips.length > 0 && (
+                    <div className="pt-4 border-t border-white/30">
+                      <p className="font-bold text-white mb-3 flex items-center">
+                        <span className="text-xl mr-2">⚠️</span> Safety Tips:
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {safetyTips.map((tip, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 * index }}
+                            className="flex items-center bg-white/10 p-3 rounded-xl"
+                            data-testid={`safety-tip-${index}`}
+                          >
+                            <div className="w-2 h-2 rounded-full bg-white mr-3"></div>
+                            <p className="text-white/90">{tip}</p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </motion.div>
+
+              {/* Alerts Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Card className="p-6 bg-white/20 backdrop-blur-lg rounded-3xl shadow-xl border border-white/30" data-testid="card-alerts">
+                  <h2 className="text-xl font-bold text-white mb-4">Weather Alerts</h2>
+                  <div className="space-y-4">
+                    <motion.div 
+                      className="flex items-center justify-between p-4 rounded-2xl bg-yellow-500/20 backdrop-blur-sm"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <div className="flex items-center">
+                        <span className="text-2xl mr-3">🌧️</span>
+                        <div>
+                          <p className="font-bold text-white">Rainfall Alert</p>
+                          <p className="text-white/80">
+                            {config
+                              ? `${config.icon} ${config.label}`
+                              : "No alerts"}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    <motion.div 
+                      className="flex items-center justify-between p-4 rounded-2xl bg-red-500/20 backdrop-blur-sm"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <div className="flex items-center">
+                        <span className="text-2xl mr-3">🌡️</span>
+                        <div>
+                          <p className="font-bold text-white">Heat Alert</p>
+                          <p className="text-white/80">
+                            {weatherData.alerts.heat
+                              ? "⚠️ Heat Danger"
+                              : "No heat alerts"}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                </Card>
+              </motion.div>
             </>
           )}
 
-          <div className="flex justify-center py-4">
-            <Button 
-              onClick={handleRefresh} 
+          {/* Refresh Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="flex justify-center py-4"
+          >
+            <Button
+              onClick={handleRefresh}
               disabled={refreshing}
-              className="w-full max-w-xs"
+              className="w-full max-w-xs flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-lg"
               data-testid="button-refresh"
             >
-              {refreshing ? 'Refreshing...' : 'Refresh Data'}
+              <RefreshCw
+                className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+              />
+              {refreshing ? "Refreshing..." : "Refresh Data"}
             </Button>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>
