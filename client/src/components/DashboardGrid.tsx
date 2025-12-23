@@ -133,37 +133,8 @@ export function DashboardGrid() {
         }}
       ></div>
 
-      {/* Header Section */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="pt-1 px-8 relative z-10"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <motion.p
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-              className="text-yellow-300 mt-1"
-            >
-              Be Prepared. Stay Safe.
-            </motion.p>
-          </div>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
-            className="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 flex items-center justify-center shadow-lg"
-          >
-            <ShieldAlert className="text-blue-950" size={24} />
-          </motion.div>
-        </div>
-      </motion.div>
-
       {/* Main Grid */}
-      <div className="px-4 pb-15 relative z-10">
+      <div className="px-4 mt-6 pb-15 relative z-10">
         <div className="grid grid-cols-2 gap-4">
           {buttons.map((btn, index) => (
             <DashboardButton
@@ -177,44 +148,7 @@ export function DashboardGrid() {
         </div>
       </div>
 
-      {/* Floating Elements */}
-      <motion.div
-        animate={{
-          y: [0, -15, 0],
-        }}
-        transition={{
-          duration: 4,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute top-5 left-6 w-3 h-3 rounded-full bg-yellow-400 opacity-70"
-      ></motion.div>
-
-      <motion.div
-        animate={{
-          y: [0, 10, 0],
-        }}
-        transition={{
-          duration: 3,
-          repeat: Infinity,
-          ease: "easeInOut",
-          delay: 1,
-        }}
-        className="absolute top-40 right-8 w-2 h-2 rounded-full bg-white opacity-50"
-      ></motion.div>
-
-      <motion.div
-        animate={{
-          y: [0, -10, 0],
-        }}
-        transition={{
-          duration: 5,
-          repeat: Infinity,
-          ease: "easeInOut",
-          delay: 2,
-        }}
-        className="absolute bottom-40 left-10 w-4 h-4 rounded-full bg-yellow-300 opacity-60"
-      ></motion.div>
+    
     </div>
   );
 }

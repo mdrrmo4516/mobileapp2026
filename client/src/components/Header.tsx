@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { PhoneCall } from "lucide-react";
 
 export function Header() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -49,75 +50,27 @@ export function Header() {
 
           <div className="flex flex-col items-center">
             <motion.h1
-              className="font-display font-extrabold text-3xl tracking-tight text-yellow-300 drop-shadow-lg uppercase text-center leading-none"
+              className="font-display font-extrabold text-2xl tracking-tight text-yellow-300 drop-shadow-lg uppercase text-center leading-none"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
               MDRRMO PIO DURAN
             </motion.h1>
-            <motion.div
-              className="flex items-center mt-1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <span className="font-display text-xl text-yellow-400 tracking-wider uppercase font-bold">
-                EMERGENCY HUB
+            <button className="bg-brand-red hover:bg-brand-red-hover mt-1 text-white w-full max-w-md rounded-full shadow-lg flex items-center justify-center gap-2 border-1 border-white active:scale-95 transition-transform animate-pulse cursor-pointer">
+              <PhoneCall size={14} fill="white" />
+              <span className="font-bold text-lg uppercase tracking-wide">
+                Hotlines!
               </span>
-            </motion.div>
+            </button>
           </div>
         </div>
-
-        {/* Time Display */}
-        <motion.div
-          className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/20 shadow-inner"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          <div className="text-yellow-200 font-mono text-sm font-medium">
-            {format(currentTime, "EEEE, MMMM d, yyyy • h:mm:ss a")}
-          </div>
-        </motion.div>
       </motion.div>
 
-      {/* Animated Marquee Strip */}
-      <motion.div
-        className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 py-2 w-full overflow-hidden relative z-20 shadow-lg"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-      >
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0ib3JhbmdlIiBmaWxsLW9wYWNpdHk9IjAuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNwYXR0ZXJuKSIvPjwvc3ZnPg==')] opacity-20"></div>
-
-        <div className="marquee-container w-full relative">
-          <motion.div
-            className="marquee-content inline-block whitespace-nowrap"
-            animate={{ x: ["100%", "-100%"] }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          >
-            <span className="text-blue-950 font-extrabold text-sm px-4 flex items-center">
-              <span className="mr-2">🚨</span>
-              Tomorrow in Pio Duran City, expect partly cloudy weather with a
-              chance of isolated rain showers. Stay safe and prepared!
-              <span className="mx-4">📞</span>
-              MDRRMO Hotline: 0917-772-5016
-              <span className="mx-4">📡</span>
-              Stay tuned for further updates.
-              <span className="mx-4">🚨</span>
-            </span>
-          </motion.div>
-        </div>
-      </motion.div>
 
       {/* Decorative Bottom Accent */}
       <motion.div
-        className="h-1 bg-gradient-to-r from-transparent via-yellow-400 to-transparent"
+        className="h-1 bg-gradient-to-r from-yellow-500 via-yellow-400 to-yellow-500"
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={{ delay: 0.8, duration: 0.5 }}

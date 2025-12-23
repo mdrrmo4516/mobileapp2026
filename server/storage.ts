@@ -27,7 +27,7 @@ import {
   hazardZones,
   pois
 } from "@shared/schema";
-import { db } from "./db";
+import { db, isSqliteFallback, sqliteDatabase } from "./db";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -66,6 +66,23 @@ export interface IStorage {
 }
 
 export class DBStorage implements IStorage {
+  private adaptForSqlite(row: Record<string, any>) {
+    if (!isSqliteFallback) return row;
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(row)) {
+      if (v === true) out[k] = 1;
+      else if (v === false) out[k] = 0;
+      else if (Array.isArray(v)) out[k] = JSON.stringify(v);
+      else out[k] = v;
+    }
+    return out;
+  }
+
+  private adaptArrayForSqlite(rows: Record<string, any>[]) {
+    if (!isSqliteFallback) return rows;
+    return rows.map(r => this.adaptForSqlite(r));
+  }
+
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -106,7 +123,7 @@ export class DBStorage implements IStorage {
   async initializeGoBagItems(): Promise<void> {
     const existingItems = await db.select().from(goBagItems);
     if (existingItems.length === 0) {
-      await db.insert(goBagItems).values([
+      const items = [
         { category: "Essentials", name: "Water (1 gallon/person)", checked: false },
         { category: "Essentials", name: "Non-perishable Food", checked: false },
         { category: "Essentials", name: "Flashlight & Batteries", checked: false },
@@ -116,7 +133,9 @@ export class DBStorage implements IStorage {
         { category: "Documents", name: "Cash & Coins", checked: false },
         { category: "Clothing", name: "Rain Jacket / Poncho", checked: false },
         { category: "Clothing", name: "Extra Clothes", checked: false },
-      ]);
+      ];
+      console.log('init goBag items', items);
+      await db.insert(goBagItems).values(this.adaptArrayForSqlite(items));
     }
   }
 
@@ -136,7 +155,7 @@ export class DBStorage implements IStorage {
   async initializeEvacuationCenters(): Promise<void> {
     const existingCenters = await db.select().from(evacuationCenters);
     if (existingCenters.length === 0) {
-      await db.insert(evacuationCenters).values([
+      const centers = [
         { 
           name: "Pio Duran Central School", 
           distance: "0.5 km", 
@@ -161,7 +180,9 @@ export class DBStorage implements IStorage {
           latitude: "13.0365",
           longitude: "123.4587"
         },
-      ]);
+      ];
+      console.log('init evacuation centers', centers);
+      await db.insert(evacuationCenters).values(this.adaptArrayForSqlite(centers));
     }
   }
 
@@ -177,9 +198,11 @@ export class DBStorage implements IStorage {
   async initializeHouseholds(): Promise<void> {
     const existing = await db.select().from(households);
     if (existing.length === 0) {
-      await db.insert(households).values([
+      const householdsToInsert = [
         { name: "Sample Household", address: "123 Main Street, Pio Duran, Albay" }
-      ]);
+      ];
+      console.log('init households', householdsToInsert);
+      await db.insert(households).values(this.adaptArrayForSqlite(householdsToInsert));
     }
   }
 
@@ -208,12 +231,14 @@ export class DBStorage implements IStorage {
   async initializeMembers(): Promise<void> {
     const existing = await db.select().from(members);
     if (existing.length === 0) {
-      await db.insert(members).values([
+      const membersToInsert = [
         { householdId: 1, name: "You", contact: "+63 912 345 6789", status: "unknown" },
         { householdId: 1, name: "Maria Santos", contact: "+63 912 345 6780", status: "unknown" },
         { householdId: 1, name: "Juan Dela Cruz", contact: "+63 912 345 6781", status: "unknown" },
         { householdId: 1, name: "Rosa Cruz", contact: "+63 912 345 6782", status: "unknown" }
-      ]);
+      ];
+      console.log('init members', membersToInsert);
+      await db.insert(members).values(this.adaptArrayForSqlite(membersToInsert));
     }
   }
 
@@ -227,26 +252,54 @@ export class DBStorage implements IStorage {
   }
 
   async getHazardZones(): Promise<HazardZone[]> {
-    return await db.select().from(hazardZones);
+    const rows = await db.select().from(hazardZones);
+    if (isSqliteFallback) {
+      // coordinates may be stored as JSON string (or already parsed) in SQLite — normalize to array
+      return rows.map(r => {
+        const coordsRaw = (r as any).coordinates;
+        let coords: string[] = [];
+        if (typeof coordsRaw === "string") {
+          try {
+            coords = JSON.parse(coordsRaw);
+          } catch (e) {
+            coords = [];
+          }
+        } else if (Array.isArray(coordsRaw)) {
+          coords = coordsRaw;
+        }
+        return { ...r, coordinates: coords } as HazardZone;
+      });
+    }
+
+    return rows;
   }
 
   async initializeHazardZones(): Promise<void> {
     const existing = await db.select().from(hazardZones);
     if (existing.length === 0) {
-      await db.insert(hazardZones).values([
+      const zones = [
         {
           name: "Bicol River Flood Zone",
           type: "flood",
-          coordinates: ["13.0300,123.4500", "13.0320,123.4520", "13.0310,123.4540"],
+          coordinates: isSqliteFallback ? JSON.stringify(["13.0300,123.4500", "13.0320,123.4520", "13.0310,123.4540"]) : ["13.0300,123.4500", "13.0320,123.4520", "13.0310,123.4540"],
           severity: "high"
         },
         {
           name: "Mt. Mayon Landslide Area",
           type: "landslide",
-          coordinates: ["13.0400,123.4600", "13.0420,123.4620", "13.0410,123.4640"],
+          coordinates: isSqliteFallback ? JSON.stringify(["13.0400,123.4600", "13.0420,123.4620", "13.0410,123.4640"]) : ["13.0400,123.4600", "13.0420,123.4620", "13.0410,123.4640"],
           severity: "medium"
         },
-      ]);
+      ];
+      console.log('init hazard zones', zones);
+      if (isSqliteFallback && sqliteDatabase) {
+        const stmt = sqliteDatabase.prepare('INSERT INTO hazard_zones (name, type, coordinates, severity) VALUES (?, ?, ?, ?)');
+        for (const z of zones) {
+          stmt.run(z.name, z.type, z.coordinates, z.severity);
+        }
+      } else {
+        await db.insert(hazardZones).values(this.adaptArrayForSqlite(zones));
+      }
     }
   }
 
@@ -260,7 +313,7 @@ export class DBStorage implements IStorage {
   async initializePois(): Promise<void> {
     const existing = await db.select().from(pois);
     if (existing.length === 0) {
-      await db.insert(pois).values([
+      const poisToInsert = [
         {
           name: "Pio Duran Health Center",
           type: "medical",
@@ -285,7 +338,9 @@ export class DBStorage implements IStorage {
           address: "Barangay Hall Compound",
           available: true
         },
-      ]);
+      ];
+      console.log('init pois', poisToInsert);
+      await db.insert(pois).values(this.adaptArrayForSqlite(poisToInsert));
     }
   }
 }
