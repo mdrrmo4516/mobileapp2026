@@ -1,4 +1,5 @@
-import { useState } from "react";
+/// <reference types="@types/google.maps" />
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { 
   ArrowLeft, 
@@ -9,7 +10,9 @@ import {
   Camera,
   Video,
   FileImage,
-  X
+  X,
+  Navigation,
+  LocateFixed
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -17,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { loadGoogleMapsScript } from "@/lib/google-maps";
 import { useMutation } from "@tanstack/react-query";
 
 const INCIDENT_TYPES = [
@@ -36,9 +40,16 @@ export default function ReportIncident() {
   const [description, setDescription] = useState("");
   const [uploadedMedia, setUploadedMedia] = useState<File[]>([]);
   const [mediaPreviews, setMediaPreviews] = useState<string[]>([]);
+  const [location, setLocationData] = useState({ 
+    lat: 13.028133144587647, 
+    lng: 123.44411597207234, 
+    address: "Legazpi City, Albay" 
+  });
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
 
   const submitIncident = useMutation({
-    mutationFn: async (data: { type: string; description: string; location: string; isAnonymous: boolean; media?: string[] }) => {
+    mutationFn: async (data: { type: string; description: string; location: string; coordinates?: { lat: number; lng: number }; isAnonymous: boolean; media?: string[] }) => {
       const res = await fetch("/api/incidents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,6 +74,139 @@ export default function ReportIncident() {
     },
   });
 
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Geolocation not supported",
+        description: "Your browser does not support location services.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocationData({
+          lat: latitude,
+          lng: longitude,
+          address: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
+        });
+
+        // Update map and marker if already initialized
+        if (markerRef.current) {
+          markerRef.current.setPosition({ lat: latitude, lng: longitude });
+        }
+        if (mapInstance) {
+          mapInstance.panTo({ lat: latitude, lng: longitude });
+          mapInstance.setZoom(16);
+        }
+
+        setIsGettingLocation(false);
+        toast({
+          title: "Location Found",
+          description: "Your current location has been set.",
+        });
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        setIsGettingLocation(false);
+        toast({
+          title: "Unable to get location",
+          description: "Please enable location services or enter your address manually.",
+          variant: "destructive",
+        });
+      }
+    );
+  };
+
+  // Use Google Maps instead of a simulated static map
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || mapInstance) return;
+
+    // Initialize Google Maps
+    loadGoogleMapsScript()
+      .then(() => {
+        const map = new google.maps.Map(mapRef.current!, {
+          center: { lat: location.lat, lng: location.lng },
+          zoom: 14,
+          mapTypeId: 'roadmap',
+          fullscreenControl: false,
+          streetViewControl: false,
+        });
+
+        // Create a marker at the current location
+        const marker = new google.maps.Marker({
+          position: { lat: location.lat, lng: location.lng },
+          map,
+          draggable: true,
+          title: 'Incident Location',
+          icon: {
+            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24">
+                <path fill="#121A73" d="M12 2C8 2 5 5 5 9c0 7 7 13 7 13s7-6 7-13c0-4-3-7-7-7z"/>
+                <circle cx="12" cy="9" r="2.5" fill="#fff"/>
+              </svg>
+            `)}`,
+            scaledSize: new google.maps.Size(36, 36),
+          },
+        });
+
+        // Update state refs
+        markerRef.current = marker;
+        setMapInstance(map);
+
+        // Reverse geocode helper
+        const geocoder = new google.maps.Geocoder();
+        const setAddressFromLatLng = (lat: number, lng: number) => {
+          geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+              setLocationData((prev) => ({ ...prev, address: results[0].formatted_address }));
+            } else {
+              setLocationData((prev) => ({ ...prev, address: `Current Location (${lat.toFixed(4)}, ${lng.toFixed(4)})` }));
+            }
+          });
+        };
+
+        // Marker drag end -> update coordinates
+        marker.addListener('dragend', (e: google.maps.MapMouseEvent) => {
+          const lat = e.latLng!.lat();
+          const lng = e.latLng!.lng();
+          setLocationData({ lat, lng, address: `Current Location (${lat.toFixed(4)}, ${lng.toFixed(4)})` });
+          setAddressFromLatLng(lat, lng);
+        });
+
+        // Map click -> move marker and update coordinates
+        map.addListener('click', (e: google.maps.MapMouseEvent) => {
+          const lat = e.latLng!.lat();
+          const lng = e.latLng!.lng();
+          marker.setPosition({ lat, lng });
+          map.panTo({ lat, lng });
+          setLocationData({ lat, lng, address: `Current Location (${lat.toFixed(4)}, ${lng.toFixed(4)})` });
+          setAddressFromLatLng(lat, lng);
+        });
+      })
+      .catch((err) => console.error('Failed to load Google Maps', err));
+  }, [mapRef, mapInstance]);
+
+  // Keep marker position in sync when `location` state changes externally
+  useEffect(() => {
+    if (!mapInstance) return;
+
+    const { lat, lng } = location;
+    mapInstance.panTo({ lat, lng });
+    if (markerRef.current) {
+      markerRef.current.setPosition({ lat, lng });
+    } else {
+      const marker = new google.maps.Marker({ position: { lat, lng }, map: mapInstance });
+      markerRef.current = marker;
+    }
+  }, [location, mapInstance]);
+
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -81,10 +225,10 @@ export default function ReportIncident() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedType || !description) {
+    if (!selectedType || !description || !location.lat || !location.lng) {
       toast({
         title: "Missing Information",
-        description: "Please select incident type and provide a description.",
+        description: "Please select incident type, provide a description, and ensure location is set.",
         variant: "destructive",
       });
       return;
@@ -93,7 +237,8 @@ export default function ReportIncident() {
     submitIncident.mutate({
       type: selectedType,
       description,
-      location: "Current Location",
+      location: location.address,
+      coordinates: { lat: location.lat, lng: location.lng },
       isAnonymous,
       media: mediaPreviews,
     });
@@ -122,7 +267,7 @@ export default function ReportIncident() {
               >
                 <SelectValue placeholder="Select incident type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 {INCIDENT_TYPES.map((type) => (
                   <SelectItem 
                     key={type.id} 
@@ -153,21 +298,31 @@ export default function ReportIncident() {
           <section className="space-y-3">
             <Label className="text-[rgba(18,26,115,1)] font-bold text-sm uppercase tracking-wider">Location</Label>
             <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
-              <div className="h-32 bg-gray-100 relative w-full">
-                <div className="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Pio_Duran_Albay.png/640px-Pio_Duran_Albay.png')] bg-cover bg-center opacity-50"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-[rgba(18,26,115,1)] text-white p-2 rounded-full shadow-lg animate-bounce">
-                    <MapPin size={24} fill="currentColor" />
-                  </div>
-                </div>
+              <div className="h-48 bg-gray-100 relative w-full" ref={mapRef} data-testid="google-map">
+                {/* Google Map will be rendered here */}
               </div>
               <div className="p-3 flex items-center justify-between bg-white">
                 <div className="flex items-center gap-2 text-[rgba(18,26,115,1)]">
                   <MapPin size={16} />
-                  <span className="text-sm font-bold">Current Location</span>
+                  <span className="text-sm font-bold truncate max-w-[200px]">{location.address}</span>
                 </div>
-                <button type="button" className="text-xs font-bold text-[rgba(18,26,115,1)] underline">
-                  Change
+                <button 
+                  type="button" 
+                  className="flex items-center gap-1 text-xs font-bold text-[rgba(18,26,115,1)] underline"
+                  onClick={getCurrentLocation}
+                  disabled={isGettingLocation}
+                >
+                  {isGettingLocation ? (
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-3 border-2 border-[rgba(18,26,115,1)] border-t-transparent rounded-full animate-spin"></span>
+                      Getting...
+                    </span>
+                  ) : (
+                    <>
+                      <LocateFixed size={12} />
+                      {location.lat ? "Change" : "Set"}
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -270,7 +425,7 @@ export default function ReportIncident() {
         <Button 
           className="flex-[2] bg-[rgba(18,26,115,1)] hover:bg-[rgba(18,26,115,0.9)] text-white font-bold h-12 rounded-lg"
           onClick={handleSubmit}
-          disabled={!selectedType || submitIncident.isPending}
+          disabled={!selectedType || !location.lat || !location.lng || submitIncident.isPending}
           data-testid="button-submit"
         >
           {submitIncident.isPending ? (

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { PhoneCall } from "lucide-react";
+import { Drawer, DrawerTrigger } from "@/components/ui/drawer";
+import { HotlineDrawerContent } from "@/components/HotlineDrawerContent";
 
 export function Header() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -57,13 +59,18 @@ export function Header() {
             >
               MDRRMO PIO DURAN
             </motion.h1>
-            <button className="bg-brand-red hover:bg-brand-red-hover mt-1 text-white w-full max-w-md rounded-full shadow-lg flex items-center justify-center gap-2 border-1 border-white active:scale-95 transition-transform animate-pulse cursor-pointer">
-              <PhoneCall size={14} fill="white" />
-              <span className="font-bold text-lg uppercase tracking-wide">
-                Hotlines!
-              </span>
-            </button>
-          </div>
+            <Drawer>
+              <DrawerTrigger asChild>
+                <button className="bg-brand-red hover:bg-brand-red-hover mt-1 text-white w-full max-w-md rounded-full shadow-lg flex items-center justify-center gap-2 border-1 border-white active:scale-95 transition-transform animate-pulse cursor-pointer">
+                  <PhoneCall size={14} fill="white" />
+                  <span className="font-bold text-lg uppercase tracking-wide">
+                    Hotlines!
+                  </span>
+                </button>
+              </DrawerTrigger>
+              <HotlineDrawerContent />
+            </Drawer>
+          </div> 
         </div>
       </motion.div>
 
@@ -75,6 +82,6 @@ export function Header() {
         animate={{ scaleX: 1 }}
         transition={{ delay: 0.8, duration: 0.5 }}
       ></motion.div>
-    </div>
+    </div> 
   );
 }

@@ -87,7 +87,7 @@ const hotlines: HotlineItem[] = [
 
 export function HotlineDrawerContent() {
   return (
-    <DrawerContent className="max-h-[85vh]">
+    <DrawerContent className="flex-1 max-h-[85vh]">
       <DrawerHeader>
         <DrawerTitle className="text-center text-2xl font-bold text-brand-yellow uppercase">Emergency Hotlines</DrawerTitle>
         <DrawerDescription className="text-center">Tap any number to dial immediately</DrawerDescription>

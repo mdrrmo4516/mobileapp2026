@@ -558,7 +558,7 @@ const WeatherOutlook = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 * index }}
                         whileHover={{ y: -10 }}
-                        className="flex flex-col items-center min-w-[85px] p-4 rounded-2xl bg-gray-50"
+                        className="flex justify-between items-start min-w-[85px] p-4 rounded-2xl bg-gray-100"
                         data-testid={`forecast-day-${index}`}
                       >
                         <p className="text-[rgba(18,26,115,1)] font-bold mb-2">{day.day}</p>
@@ -634,11 +634,34 @@ const WeatherOutlook = () => {
                 </Card>
               </motion.div>
 
-              {/* Alerts Card */}
+              {/* Satellite Image Card */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
+              >
+                <Card className="p-6 bg-white rounded-3xl shadow-md border border-gray-200">
+                  <h2 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-4">Satellite Image</h2>
+                  <div className="flex justify-center">
+                    <div className="overflow-hidden rounded-xl border border-gray-200 w-full max-w-md">
+                      <img 
+                        src="https://src.meteopilipinas.gov.ph/repo/mtsat-colored/24hour/latest-him-colored.gif" 
+                        alt="Satellite Weather Image" 
+                        className="w-full h-auto object-contain"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-center text-sm text-gray-500 mt-2">
+                    Latest Himawari-8 Satellite Image
+                  </p>
+                </Card>
+              </motion.div>
+
+              {/* Alerts Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
               >
                 <Card className="p-6 bg-white rounded-3xl shadow-md border border-gray-200" data-testid="card-alerts">
                   <h2 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-4">Weather Alerts</h2>
@@ -686,7 +709,7 @@ const WeatherOutlook = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.6 }}
             className="flex justify-center py-4"
           >
             <Button

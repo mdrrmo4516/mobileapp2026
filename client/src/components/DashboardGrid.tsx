@@ -32,7 +32,7 @@ function DashboardButton({
       whileHover={{ y: -5, boxShadow: "0 10px 20px rgba(0,0,0,0.1)" }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="flex flex-col items-center justify-center bg-gradient-to-br from-white to-blue-50 rounded-2xl p-5 shadow-[0_8px_0_0_rgba(59,130,246,0.5)] active:shadow-none active:translate-y-[8px] transition-all border-2 border-yellow-500 h-36 w-full group cursor-pointer relative overflow-hidden"
+      className="flex flex-col items-center justify-center bg-gradient-to-br from-white to-blue-50 rounded-2xl p-5 shadow-[0_8px_0_0_rgba(59,130,246,0.5)] active:shadow-none active:translate-y-[8px] transition-all border-3 border-yellow-500 h-36 w-full group cursor-pointer relative overflow-hidden"
     >
       {/* Animated background element */}
       <div className="absolute -top-8 -right-8 w-24 h-24 bg-yellow-400 rounded-full opacity-10 blur-xl"></div>
@@ -89,9 +89,9 @@ export function DashboardGrid() {
       onClick: () => setLocation("/emergency-tools"),
     },
     {
-      icon: <FileText size={40} strokeWidth={1.5} />,
-      label: "Resources",
-      onClick: () => setLocation("/public-documents"),
+      icon: <Map size={40} strokeWidth={1.5} />,
+      label: "Interactive Map",
+      onClick: () => setLocation("/interactive-map"),
     },
     {
       icon: <GraduationCap size={40} strokeWidth={1.5} />,
@@ -101,7 +101,7 @@ export function DashboardGrid() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-900 to-blue-800 relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div
@@ -118,20 +118,7 @@ export function DashboardGrid() {
         ></div>
       </div>
 
-      {/* Secondary Pattern Overlay */}
-      <div
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage: `
-          linear-gradient(45deg, #ffffff 25%, transparent 25%),
-          linear-gradient(-45deg, #ffffff 25%, transparent 25%),
-          linear-gradient(45deg, transparent 75%, #ffffff 75%),
-          linear-gradient(-45deg, transparent 75%, #ffffff 75%)
-        `,
-          backgroundSize: "20px 20px",
-          backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-        }}
-      ></div>
+      
 
       {/* Main Grid */}
       <div className="px-4 mt-6 pb-15 relative z-10">

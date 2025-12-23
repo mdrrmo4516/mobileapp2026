@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Download,
   Eye,
+  Map,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -108,8 +109,12 @@ export default function LearningMaterials() {
             <h2 className="font-bold text-brand-blue text-lg">
               Documents & Resources
             </h2>
-            <button className="text-xs font-bold text-brand-blue/70">
-              View All
+            <button
+              className="text-xs font-bold text-brand-blue/70 flex items-center gap-2"
+              onClick={() => setLocation("/interactive-map")}
+            >
+              <Map size={16} />
+              Interactive Map
             </button>
           </div>
 
