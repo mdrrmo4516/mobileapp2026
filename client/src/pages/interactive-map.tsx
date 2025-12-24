@@ -18,7 +18,7 @@ export default function InteractiveMap() {
         if (!mapRef.current || map) return;
 
         const mapInstance = new google.maps.Map(mapRef.current!, {
-          center: { lat: 13.030140119488692, lng: 123.44566048537946 13.030140119488692%2C123.44566048537946&z=18 }, // center of the Philippines
+          center: { lat: 13.030140119488692, lng: 123.44566048537946 }, // center of the Philippines
           zoom: 6,
           fullscreenControl: true,
         });
