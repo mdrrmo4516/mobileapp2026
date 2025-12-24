@@ -53,7 +53,7 @@ export default function InteractiveMap() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-white flex flex-col max-w-md mx-auto bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800 flex flex-col relative overflow-hidden">
       {/* Emergency Header */}
       <div className="relative z-20 p-6 safe-area-inset-top">
         <div className="flex items-center justify-between">
