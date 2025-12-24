@@ -29,6 +29,7 @@ const exampleHazardZones = [
 export default function InteractiveMap() {
   const [markers, setMarkers] = useState(exampleMarkers);
   const [hazardZones, setHazardZones] = useState(exampleHazardZones);
+  const [, setLocation] = useLocation();
 
   const handleMarkerAdd = (marker: any) => {
     setMarkers(prev => [...prev, marker]);
