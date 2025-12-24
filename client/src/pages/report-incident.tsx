@@ -27,9 +27,11 @@ const INCIDENT_TYPES = [
   { id: "fire", label: "Fire" },
   { id: "flood", label: "Flood" },
   { id: "landslide", label: "Landslide" },
+  { id: "storm-surge", label: "Storm Surge" },
   { id: "vehicular-accident", label: "Vehicular Accident" },
   { id: "medical-emergency", label: "Medical Emergency" },
   { id: "earthquake", label: "Earthquake" },
+  { id: "others", label: "Others (please specify on the description)" },
 ];
 
 export default function ReportIncident() {
@@ -267,7 +269,7 @@ export default function ReportIncident() {
               >
                 <SelectValue placeholder="Select incident type" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent className="bg-white text-[rgba(18,26,115,1)]">
                 {INCIDENT_TYPES.map((type) => (
                   <SelectItem 
                     key={type.id} 

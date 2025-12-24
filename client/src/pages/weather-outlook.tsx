@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, RefreshCw, Cloud, Sun, Droplets, Wind, ArrowLeft } from "lucide-react";
+import { X, RefreshCw, Cloud, Sun, Droplets, Wind, ArrowLeft, MapPin, AlertTriangle, Navigation } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const API_KEY = "bb0b8b639634c8a7a6c9faee7dca96e5";
@@ -77,6 +77,20 @@ const WeatherOutlook = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [typhoonData, setTyphoonData] = useState({
+    name: "Typhoon Yagi",
+    currentPosition: { lat: 15.2, lng: 120.5 },
+    maxWind: 185,
+    movement: { direction: "West", speed: 15 },
+    intensity: "Severe Tropical Storm",
+    forecastTrack: [
+      { day: "Today", position: { lat: 15.2, lng: 120.5 }, intensity: "Severe Tropical Storm" },
+      { day: "Tomorrow", position: { lat: 14.8, lng: 119.8 }, intensity: "Typhoon" },
+      { day: "Day +2", position: { lat: 14.5, lng: 119.0 }, intensity: "Typhoon" },
+      { day: "Day +3", position: { lat: 14.2, lng: 118.2 }, intensity: "Typhoon" },
+      { day: "Day +4", position: { lat: 13.9, lng: 117.5 }, intensity: "Tropical Storm" }
+    ]
+  });
 
   const handleBack = () => {
     setLocation("/");
@@ -145,7 +159,6 @@ const WeatherOutlook = () => {
       setRefreshing(false);
     }
   };
-
 
   const processWeatherData = (current: any, forecast: any): WeatherData => {
     // Process current weather
@@ -322,235 +335,123 @@ const WeatherOutlook = () => {
   };
 
   return (
-    <div className={`${getBackgroundGradient()} transition-all duration-1000`}>
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Header */}
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white rounded-2xl p-4 mb-6 shadow-md border border-gray-200"
-        >
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={handleBack}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                data-testid="button-back"
-              >
-                <ArrowLeft size={24} className="text-[rgba(18,26,115,1)]" />
-              </motion.button>
-              <div>
-                <motion.h1
-                  initial={{ x: -20 }}
-                  animate={{ x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-2xl font-bold text-[rgba(18,26,115,1)]"
-                  data-testid="text-city"
+    <div className="min-h-screen bg-white flex flex-col max-w-md mx-auto shadow-none relative" style={{ background: "white" }}>
+       {/* Header */}
+              <header className="bg-[rgba(18,26,115,1)] text-white p-4 sticky top-0 z-20 shadow-sm flex items-center gap-3">
+                <button 
+                  onClick={() => setLocation("/")}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
                 >
-                  {weatherData?.location.name || LOCATION_NAME}
-                </motion.h1>
-              <motion.p
-                initial={{ x: -20 }}
-                animate={{ x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-[rgba(18,26,115,0.7)]"
-                data-testid="text-coordinates"
-              >
-                {LAT.toFixed(4)}°N, {LON.toFixed(4)}°E
-              </motion.p>
-              </div>
-            </div>
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[rgba(18,26,115,1)] hover:bg-gray-100"
-                onClick={handleRefresh}
-                disabled={refreshing}
-                data-testid="button-refresh-header"
-              >
-                <RefreshCw
-                  className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
-                />
-              </Button>
-            </motion.div>
-          </div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="flex items-center gap-2"
-          >
-            <div
-              className={`w-3 h-3 rounded-full ${isOnline ? "bg-green-500" : "bg-red-500"} animate-pulse`}
-              data-testid="indicator-online-status"
-            />
-            <span
-              className="text-sm text-[rgba(18,26,115,0.7)]"
-              data-testid="text-online-status"
-            >
-              {isOnline ? "Online" : "Offline"}
-            </span>
-            {lastUpdated && (
-              <span className="text-sm text-[rgba(18,26,115,0.7)] ml-2">
-                Updated:{" "}
-                {lastUpdated.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            )}
-          </motion.div>
-        </motion.div>
+                  <ArrowLeft size={24} />
+                </button>
+                <h1 className="font-bold text-xl tracking-wide uppercase">WEATHER MONITORING</h1>
+              </header>
 
-        <div className="space-y-6">
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-red-100 rounded-2xl text-red-800 border border-red-300"
-            >
-              {error}
-            </motion.div>
-          )}
+      <div className="max-w-4xl mx-auto px-2 py-4">
+       
 
-          <AnimatePresence>
-            {config && showAlert && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="p-4 rounded-2xl flex items-center justify-between"
-                style={{ backgroundColor: config.color + "20", border: `1px solid ${config.color}40` }}
-                data-testid="banner-alert"
-              >
-                <div className="flex-1">
-                  <p
-                    className="text-center font-bold text-lg"
-                    style={{ color: config.color }}
-                  >
-                    {config.icon} {config.label}
-                  </p>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setShowAlert(false)}
-                  className="ml-2 p-1 hover:opacity-70 transition-opacity rounded-full"
-                  style={{ color: config.color, backgroundColor: config.color + "20" }}
-                  data-testid="button-close-alert"
+        {/* Section 1: LOCAL WEATHER MONITORING */}
+        <section className="mb-4">
+          
+            {weatherData && (
+              <div className="flex flex-col items-center gap-1">
+                {/* Current Weather Card */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
                 >
-                  <X size={20} />
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {weatherData && (
-            <>
-              {/* Current Weather Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Card className="p-6 bg-white rounded-3xl shadow-md border border-gray-200">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h2 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-1">Current Weather</h2>
+                  <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl shadow-md border border-gray-200 h-full">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-1">Current Weather</h3>
+                        <p className="text-[rgba(18,26,115,0.8)]">{weatherData.location.name}</p>
+                      </div>
+                      <div className="text-5xl">
+                        {weatherIcons[weatherData.current.icon] || "🌤️"}
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-start mb-4">
                       <motion.p 
-                        className="text-6xl font-bold text-[rgba(18,26,115,1)] mb-2"
+                        className="text-4xl font-bold text-[rgba(18,26,115,1)]"
                         initial={{ scale: 0.9 }}
                         animate={{ scale: 1 }}
                         transition={{ type: "spring", stiffness: 300 }}
                       >
                         {weatherData.current.temp}°
                       </motion.p>
-                      <p className="text-[rgba(18,26,115,0.8)] capitalize text-lg">
-                        {weatherData.current.condition}
-                      </p>
+                      <span className="text-lg text-[rgba(18,26,115,0.8)] ml-2">
+                        Feels like {weatherData.current.feelsLike}°
+                      </span>
+                      <p className="text-[rgba(18,26,115,0.8)] capitalize text-lg mb-4">
+                      {weatherData.current.condition}
+                    </p>
                     </div>
-                    <motion.div 
-                      className="text-7xl"
-                      initial={{ rotate: -10 }}
-                      animate={{ rotate: 0 }}
-                      transition={{ type: "spring", stiffness: 200 }}
-                    >
-                      {weatherIcons[weatherData.current.icon] || "🌤️"}
-                    </motion.div>
-                  </div>
+                    
+                    
+                    
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                    <motion.div 
-                      className="flex items-center bg-yellow-50 p-3 rounded-2xl"
-                      whileHover={{ scale: 1.03 }}
-                    >
-                      <Sun className="h-8 w-8 text-[rgba(18,26,115,1)] mr-3" />
-                      <div>
-                        <p className="text-[rgba(18,26,115,0.7)] text-sm">Feels Like</p>
-                        <p className="font-bold text-[rgba(18,26,115,1)] text-lg">
-                          {weatherData.current.feelsLike}°
-                        </p>
-                      </div>
-                    </motion.div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <motion.div 
+                        className="flex items-center bg-white p-3 rounded-2xl shadow-sm"
+                        whileHover={{ scale: 1.03 }}
+                      >
+                        <Wind className="h-6 w-6 text-[rgba(18,26,115,1)] mr-2" />
+                        <div>
+                          <p className="text-[rgba(18,26,115,0.7)] text-xs">Wind</p>
+                          <p className="font-bold text-[rgba(18,26,115,1)]">
+                            {weatherData.current.windSpeed} km/h
+                          </p>
+                        </div>
+                      </motion.div>
 
-                    <motion.div 
-                      className="flex items-center bg-blue-50 p-3 rounded-2xl"
-                      whileHover={{ scale: 1.03 }}
-                    >
-                      <Wind className="h-8 w-8 text-[rgba(18,26,115,1)] mr-3" />
-                      <div>
-                        <p className="text-[rgba(18,26,115,0.7)] text-sm">Wind</p>
-                        <p className="font-bold text-[rgba(18,26,115,1)] text-lg">
-                          {weatherData.current.windSpeed} km/h
-                        </p>
-                      </div>
-                    </motion.div>
+                      <motion.div 
+                        className="flex items-center bg-white p-3 rounded-2xl shadow-sm"
+                        whileHover={{ scale: 1.03 }}
+                      >
+                        <Droplets className="h-6 w-6 text-[rgba(18,26,115,1)] mr-2" />
+                        <div>
+                          <p className="text-[rgba(18,26,115,0.7)] text-xs">Humidity</p>
+                          <p className="font-bold text-[rgba(18,26,115,1)]">
+                            {weatherData.current.humidity}%
+                          </p>
+                        </div>
+                      </motion.div>
+                    </div>
 
-                    <motion.div 
-                      className="flex items-center bg-blue-50 p-3 rounded-2xl"
-                      whileHover={{ scale: 1.03 }}
-                    >
-                      <Droplets className="h-8 w-8 text-[rgba(18,26,115,1)] mr-3" />
-                      <div>
-                        <p className="text-[rgba(18,26,115,0.7)] text-sm">Humidity</p>
-                        <p className="font-bold text-[rgba(18,26,115,1)] text-lg">
-                          {weatherData.current.humidity}%
-                        </p>
-                      </div>
-                    </motion.div>
 
-                    <motion.div 
-                      className="flex items-center bg-yellow-50 p-3 rounded-2xl"
-                      whileHover={{ scale: 1.03 }}
-                    >
-                      <Cloud className="h-8 w-8 text-[rgba(18,26,115,1)] mr-3" />
-                      <div>
-                        <p className="text-[rgba(18,26,115,0.7)] text-sm">Heat Index</p>
-                        <p className="font-bold text-[rgba(18,26,115,1)] text-lg">
-                          {weatherData.current.heatIndex}°
-                        </p>
-                      </div>
-                    </motion.div>
-                  </div>
-                </Card>
-              </motion.div>
+                    <div className="grid grid-cols-2 mt-2 gap-3">
+                      <motion.div 
+                        className="flex items-center bg-white p-3 rounded-2xl shadow-sm"
+                        whileHover={{ scale: 1.03 }}
+                      >
+                        <Wind className="h-6 w-6 text-[rgba(18,26,115,1)] mr-2" />
+                        <div>
+                          <p className="text-[rgba(18,26,115,0.7)] text-xs">Wind Direction</p>
+                          <p className="font-bold text-[rgba(18,26,115,1)]">
+                            {weatherData.current.windDirection}
+                          </p>
+                        </div>
+                      </motion.div>
 
-              {/* Forecast Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Card className="p-6 bg-white rounded-3xl shadow-md border border-gray-200" data-testid="card-forecast">
-                  <h2 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-4">5-Day Forecast</h2>
-                  <div className="flex gap-3 overflow-x-auto pb-2">
+                      <motion.div 
+                        className="flex items-center bg-white p-3 rounded-2xl shadow-sm"
+                        whileHover={{ scale: 1.03 }}
+                      >
+                        <Droplets className="h-6 w-6 text-[rgba(18,26,115,1)] mr-2" />
+                        <div>
+                          <p className="text-[rgba(18,26,115,0.7)] text-xs">Heat Index</p>
+                          <p className="font-bold text-[rgba(18,26,115,1)]">
+                            {weatherData.current.heatIndex}°C
+                          </p>
+                        </div>
+                        
+                      </motion.div>
+                    </div>
+                    
+                    <h3 className="text-xl font-bold text-[rgba(18,26,115,1)] mt-2 mb-2">5-Day Forecast</h3>
+                   <div className="grid grid-cols-5 gap-2">
                     {weatherData.forecast.map((day, index) => (
                       <motion.div
                         key={index}
@@ -558,7 +459,7 @@ const WeatherOutlook = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 * index }}
                         whileHover={{ y: -10 }}
-                        className="flex justify-between items-start min-w-[85px] p-4 rounded-2xl bg-gray-100"
+                        className="flex flex-col justify-between items-start min-w-[85px] p-2 rounded-2xl bg-gray-100"
                         data-testid={`forecast-day-${index}`}
                       >
                         <p className="text-[rgba(18,26,115,1)] font-bold mb-2">{day.day}</p>
@@ -572,78 +473,42 @@ const WeatherOutlook = () => {
                       </motion.div>
                     ))}
                   </div>
-                </Card>
-              </motion.div>
+                
+                 
+                </div>
+                  
+                </motion.div>
 
-              {/* Heat Index & Safety Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Card className="p-6 bg-white rounded-3xl shadow-md border border-gray-200" data-testid="card-heat-index">
-                  <h2 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-4">Heat Index & Safety</h2>
-                  <div className="mb-4">
-                    <p className="text-[rgba(18,26,115,1)] text-lg flex items-center">
-                      <Sun className="h-6 w-6 text-[rgba(18,26,115,1)] mr-2" />
-                      Heat Index:{" "}
-                      <span className="font-bold ml-2" data-testid="text-heat-index">
-                        {weatherData.current.heatIndex}°C
-                      </span>
-                    </p>
-                    <motion.p
-                      className={`font-bold mt-2 text-lg ${
-                        heatIndexLevel === "Danger" 
-                          ? "text-red-600" 
-                          : heatIndexLevel === "Caution" 
-                          ? "text-orange-600" 
-                          : heatIndexLevel === "Extreme Caution" 
-                          ? "text-red-700" 
-                          : "text-green-600"
-                      }`}
-                      data-testid="text-heat-level"
-                      initial={{ scale: 0.9 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                    >
-                      {heatIndexLevel}
-                    </motion.p>
-                  </div>
-                  {safetyTips.length > 0 && (
-                    <div className="pt-4 border-t border-gray-200">
-                      <p className="font-bold text-[rgba(18,26,115,1)] mb-3 flex items-center">
-                        <span className="text-xl mr-2">⚠️</span> Safety Tips:
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {safetyTips.map((tip, index) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 * index }}
-                            className="flex items-center bg-yellow-50 p-3 rounded-xl"
-                            data-testid={`safety-tip-${index}`}
-                          >
-                            <div className="w-2 h-2 rounded-full bg-[rgba(18,26,115,1)] mr-3"></div>
-                            <p className="text-[rgba(18,26,115,0.9)]">{tip}</p>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              </motion.div>
+               
+              </div>
+            )}
 
+        </section>
+
+        {/* Section 2: TYPHOON MONITORING */}
+        <section className="mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white rounded-3xl shadow-md border border-gray-200 p-2"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+              <h2 className="text-2xl font-bold text-[rgba(18,26,115,1)]">TYPHOON MONITORING</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-2">
               {/* Satellite Image Card */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
               >
-                <Card className="p-6 bg-white rounded-3xl shadow-md border border-gray-200">
-                  <h2 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-4">Satellite Image</h2>
+                <Card className="p-2 bg-gradient-to-br from-gray-50 to-blue-50 rounded-3xl shadow-md border border-gray-200">
+
                   <div className="flex justify-center">
-                    <div className="overflow-hidden rounded-xl border border-gray-200 w-full max-w-md">
+                    <div className="overflow-hidden border-gray-200 w-full max-w-md">
                       <img 
                         src="https://src.meteopilipinas.gov.ph/repo/mtsat-colored/24hour/latest-him-colored.gif" 
                         alt="Satellite Weather Image" 
@@ -652,79 +517,124 @@ const WeatherOutlook = () => {
                     </div>
                   </div>
                   <p className="text-center text-sm text-gray-500 mt-2">
-                    Latest Himawari-8 Satellite Image
+                    Live Update Himawari-8 Satellite Image
                   </p>
                 </Card>
               </motion.div>
 
-              {/* Alerts Card */}
+              {/* Typhoon Tracking Card */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
               >
-                <Card className="p-6 bg-white rounded-3xl shadow-md border border-gray-200" data-testid="card-alerts">
-                  <h2 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-4">Weather Alerts</h2>
+                <Card className="p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl shadow-md border border-gray-200">
+                  <h3 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-4">Typhoon Tracking</h3>
+                  
                   <div className="space-y-4">
-                    <motion.div 
-                      className="flex items-center justify-between p-4 rounded-2xl bg-yellow-50"
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      <div className="flex items-center">
-                        <span className="text-2xl mr-3">🌧️</span>
-                        <div>
-                          <p className="font-bold text-[rgba(18,26,115,1)]">Rainfall Alert</p>
-                          <p className="text-[rgba(18,26,115,0.8)]">
-                            {config
-                              ? `${config.icon} ${config.label}`
-                              : "No alerts"}
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
-
-                    <motion.div 
-                      className="flex items-center justify-between p-4 rounded-2xl bg-red-50"
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      <div className="flex items-center">
-                        <span className="text-2xl mr-3">🌡️</span>
-                        <div>
-                          <p className="font-bold text-[rgba(18,26,115,1)]">Heat Alert</p>
-                          <p className="text-[rgba(18,26,115,0.8)]">
-                            {weatherData.alerts.heat
-                              ? "⚠️ Heat Danger"
-                              : "No heat alerts"}
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
+                    <div className="flex items-center justify-between p-3 bg-white rounded-2xl shadow-sm">
+                      <span className="text-[rgba(18,26,115,0.8)]">Typhoon Name</span>
+                      <span className="font-bold text-[rgba(18,26,115,1)]">{typhoonData.name}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-white rounded-2xl shadow-sm">
+                      <span className="text-[rgba(18,26,115,0.8)]">Current Position</span>
+                      <span className="font-bold text-[rgba(18,26,115,1)]">
+                        {typhoonData.currentPosition.lat}°N, {typhoonData.currentPosition.lng}°E
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-white rounded-2xl shadow-sm">
+                      <span className="text-[rgba(18,26,115,0.8)]">Max Wind Speed</span>
+                      <span className="font-bold text-[rgba(18,26,115,1)]">{typhoonData.maxWind} km/h</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-white rounded-2xl shadow-sm">
+                      <span className="text-[rgba(18,26,115,0.8)]">Movement</span>
+                      <span className="font-bold text-[rgba(18,26,115,1)]">
+                        {typhoonData.movement.direction} at {typhoonData.movement.speed} km/h
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-white rounded-2xl shadow-sm">
+                      <span className="text-[rgba(18,26,115,0.8)]">Intensity</span>
+                      <span className="font-bold text-[rgba(18,26,115,1)]">{typhoonData.intensity}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <h4 className="font-bold text-[rgba(18,26,115,1)] mb-2">Forecast Track</h4>
+                    <div className="space-y-2">
+                      {typhoonData.forecastTrack.map((day, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 * index }}
+                          className="flex items-center justify-between p-2 bg-white rounded-xl shadow-sm"
+                        >
+                          <span className="text-sm text-[rgba(18,26,115,0.8)]">{day.day}</span>
+                          <span className="text-sm font-medium text-[rgba(18,26,115,1)]">
+                            {day.position.lat}°N, {day.position.lng}°E
+                          </span>
+                          <span className="text-sm font-medium text-[rgba(18,26,115,1)]">{day.intensity}</span>
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
                 </Card>
               </motion.div>
-            </>
-          )}
-
-          {/* Refresh Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="flex justify-center py-4"
-          >
-            <Button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="w-full max-w-xs flex items-center gap-2 bg-[rgba(18,26,115,1)] hover:bg-[rgba(18,26,115,0.9)] text-white"
-              data-testid="button-refresh"
+            </div>
+            
+            {/* Typhoon Path Visualization */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mt-6"
             >
-              <RefreshCw
-                className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
-              />
-              {refreshing ? "Refreshing..." : "Refresh Data"}
-            </Button>
+              <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl shadow-md border border-gray-200">
+                <h3 className="text-xl font-bold text-[rgba(18,26,115,1)] mb-4">Typhoon Path Visualization</h3>
+                <div className="relative h-64 bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl overflow-hidden">
+                  {/* Simulated typhoon path */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <Navigation className="h-12 w-12 text-purple-600 mx-auto mb-2" />
+                      <p className="text-[rgba(18,26,115,0.8)]">Interactive Typhoon Path Map</p>
+                      <p className="text-sm text-[rgba(18,26,115,0.6)]">Real-time tracking visualization</p>
+                    </div>
+                  </div>
+                  
+                  {/* Path indicators */}
+                  <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
+                  <div className="absolute top-1/3 left-1/2 w-4 h-4 bg-orange-500 rounded-full animate-pulse"></div>
+                  <div className="absolute top-1/2 right-1/3 w-4 h-4 bg-yellow-500 rounded-full animate-pulse"></div>
+                  <div className="absolute bottom-1/4 right-1/4 w-4 h-4 bg-green-500 rounded-full animate-pulse"></div>
+                </div>
+              </Card>
+            </motion.div>
           </motion.div>
-        </div>
+        </section>
+
+        {/* Refresh Button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="flex justify-center py-4"
+        >
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="w-full max-w-xs flex items-center gap-2 bg-[rgba(18,26,115,1)] hover:bg-[rgba(18,26,115,0.9)] text-white"
+            data-testid="button-refresh"
+          >
+            <RefreshCw
+              className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+            />
+            {refreshing ? "Refreshing..." : "Refresh Data"}
+          </Button>
+        </motion.div>
       </div>
     </div>
   );
