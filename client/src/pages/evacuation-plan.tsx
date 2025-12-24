@@ -1,11 +1,11 @@
-/// <reference types="@types/google.maps" />
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { 
-  ArrowLeft, 
-  MapPin, 
-  Navigation, 
-  Users, 
+import * as L from 'leaflet';
+import {
+  ArrowLeft,
+  MapPin,
+  Navigation,
+  Users,
   Info,
   Layers,
   Heart,
@@ -26,7 +26,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { loadGoogleMapsScript } from "@/lib/google-maps";
 
 type EvacuationCenter = {
   id: number;
@@ -65,18 +64,22 @@ type Member = {
   status: string;
 };
 
+// Define Leaflet types
+type LeafletMap = any;
+type LeafletLayer = any;
+
 export default function EvacuationPlan() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [map, setMap] = useState<LeafletMap | null>(null);
   const [activeTab, setActiveTab] = useState("map");
 
   // Refs to track map overlays
-  const hazardPolygonsRef = useRef<google.maps.Polygon[]>([]);
-  const poiMarkersRef = useRef<google.maps.Marker[]>([]);
-  const centerMarkersRef = useRef<google.maps.Marker[]>([]);
+  const hazardLayersRef = useRef<LeafletLayer[]>([]);
+  const poiMarkersRef = useRef<LeafletLayer[]>([]);
+  const centerMarkersRef = useRef<LeafletLayer[]>([]);
 
   // Layer toggles
   const [showHazardZones, setShowHazardZones] = useState(true);
@@ -144,18 +147,17 @@ export default function EvacuationPlan() {
     },
   });
 
-  // Initialize Google Map
+  // Initialize Leaflet Map
   useEffect(() => {
     if (!mapRef.current || map) return;
 
-    loadGoogleMapsScript().then(() => {
-      const mapInstance = new google.maps.Map(mapRef.current!, {
-        center: { lat: 13.0345, lng: 123.4567 },
-        zoom: 14,
-        mapTypeId: 'roadmap',
-      });
-      setMap(mapInstance);
-    }).catch(console.error);
+    const mapInstance = L.map(mapRef.current!).setView([13.0345, 123.4567], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(mapInstance);
+
+    setMap(mapInstance);
   }, [map]);
 
   // Render evacuation centers
@@ -163,38 +165,38 @@ export default function EvacuationPlan() {
     if (!map || !centers.length) return;
 
     // Clear existing markers
-    centerMarkersRef.current.forEach(marker => marker.setMap(null));
+    centerMarkersRef.current.forEach(marker => {
+      if (map.hasLayer(marker)) {
+        map.removeLayer(marker);
+      }
+    });
     centerMarkersRef.current = [];
 
     centers.forEach((center) => {
       if (center.latitude && center.longitude) {
-        const marker = new google.maps.Marker({
-          position: { lat: parseFloat(center.latitude), lng: parseFloat(center.longitude) },
-          map,
-          title: center.name,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: center.status === "Open" ? "#22c55e" : "#ef4444",
-            fillOpacity: 1,
-            strokeColor: "#fff",
-            strokeWeight: 2,
-          },
-        });
+        const L = require('leaflet');
+        const marker = L.marker([
+          parseFloat(center.latitude), 
+          parseFloat(center.longitude)
+        ]).addTo(map);
 
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div style="padding: 8px;">
-              <h3 style="font-weight: bold; margin-bottom: 4px;">${center.name}</h3>
-              <p style="font-size: 12px; color: #666;">${center.distance} • ${center.capacity}</p>
-              <p style="font-size: 12px; font-weight: bold; color: ${center.status === 'Open' ? '#22c55e' : '#ef4444'};">${center.status}</p>
-            </div>
-          `,
+        const statusColor = center.status === "Open" ? "#22c55e" : "#ef4444";
+        const icon = L.divIcon({
+          html: `<div style="background-color: ${statusColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
+          className: 'custom-marker',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
         });
+        marker.setIcon(icon);
 
-        marker.addListener("click", () => {
-          infoWindow.open(map, marker);
-        });
+        const popupContent = `
+          <div style="padding: 8px;">
+            <h3 style="font-weight: bold; margin-bottom: 4px;">${center.name}</h3>
+            <p style="font-size: 12px; color: #666;">${center.distance} • ${center.capacity}</p>
+            <p style="font-size: 12px; font-weight: bold; color: ${statusColor};">${center.status}</p>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
 
         centerMarkersRef.current.push(marker);
       }
@@ -206,28 +208,32 @@ export default function EvacuationPlan() {
     if (!map || !hazardZones.length) return;
 
     // Clear existing polygons
-    hazardPolygonsRef.current.forEach(polygon => polygon.setMap(null));
-    hazardPolygonsRef.current = [];
+    hazardLayersRef.current.forEach(layer => {
+      if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    });
+    hazardLayersRef.current = [];
 
     if (!showHazardZones) return;
 
+    const L = require('leaflet');
     hazardZones.forEach((zone) => {
       const coordinates = zone.coordinates.map((coord) => {
         const [lat, lng] = coord.split(',').map(parseFloat);
-        return { lat, lng };
+        return [lat, lng];
       });
 
-      const polygon = new google.maps.Polygon({
-        paths: coordinates,
-        strokeColor: zone.type === "flood" ? "#3b82f6" : "#f59e0b",
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
-        fillColor: zone.type === "flood" ? "#3b82f6" : "#f59e0b",
-        fillOpacity: 0.2,
-        map,
-      });
+      const zoneColor = zone.type === "flood" ? "#3b82f6" : "#f59e0b";
+      const polygon = L.polygon(coordinates, {
+        color: zoneColor,
+        opacity: 0.8,
+        weight: 2,
+        fillColor: zoneColor,
+        fillOpacity: 0.2
+      }).addTo(map);
 
-      hazardPolygonsRef.current.push(polygon);
+      hazardLayersRef.current.push(polygon);
     });
   }, [map, hazardZones, showHazardZones]);
 
@@ -236,9 +242,14 @@ export default function EvacuationPlan() {
     if (!map || !pois.length) return;
 
     // Clear existing POI markers
-    poiMarkersRef.current.forEach(marker => marker.setMap(null));
+    poiMarkersRef.current.forEach(marker => {
+      if (map.hasLayer(marker)) {
+        map.removeLayer(marker);
+      }
+    });
     poiMarkersRef.current = [];
 
+    const L = require('leaflet');
     pois.forEach((poi) => {
       let shouldShow = false;
       if (poi.type === "medical" && showMedical) shouldShow = true;
@@ -246,19 +257,21 @@ export default function EvacuationPlan() {
       if (poi.type === "charging" && showCharging) shouldShow = true;
 
       if (shouldShow) {
-        const marker = new google.maps.Marker({
-          position: { lat: parseFloat(poi.latitude), lng: parseFloat(poi.longitude) },
-          map,
-          title: poi.name,
-          icon: {
-            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${poi.type === 'medical' ? '#ef4444' : poi.type === 'pet-shelter' ? '#8b5cf6' : '#eab308'}">
-                <circle cx="12" cy="12" r="10"/>
-              </svg>
-            `)}`,
-            scaledSize: new google.maps.Size(24, 24),
-          },
+        const poiColor = poi.type === 'medical' ? '#ef4444' : poi.type === 'pet-shelter' ? '#8b5cf6' : '#eab308';
+        const marker = L.marker([
+          parseFloat(poi.latitude), 
+          parseFloat(poi.longitude)
+        ]).addTo(map);
+
+        const icon = L.divIcon({
+          html: `<div style="background-color: ${poiColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
+          className: 'custom-poi-marker',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
         });
+        marker.setIcon(icon);
+
+        marker.bindPopup(`<b>${poi.name}</b><br>${poi.type.replace('-', ' ')}`);
 
         poiMarkersRef.current.push(marker);
       }
@@ -331,7 +344,7 @@ export default function EvacuationPlan() {
         </TabsList>
 
         <TabsContent value="map" className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div ref={mapRef} className="h-96 bg-slate-200 rounded-xl overflow-hidden shadow-lg" data-testid="google-map"></div>
+          <div ref={mapRef} className="h-96 bg-slate-200 rounded-xl overflow-hidden shadow-lg" data-testid="leaflet-map"></div>
 
           <Card>
             <CardContent className="p-4 space-y-3">

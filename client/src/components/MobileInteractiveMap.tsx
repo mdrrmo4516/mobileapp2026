@@ -382,10 +382,11 @@ const MobileInteractiveMap: React.FC<MobileInteractiveMapProps> = ({
         setIsLocating(false);
       },
       (error) => {
-        alert('Unable to get your location: ' + error.message);
+        console.error('Geolocation error:', error);
+        alert(`Unable to get your location: ${error.message}`);
         setIsLocating(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 } // Emergency-grade accuracy
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 } // Emergency-grade accuracy
     );
   }, [accuracyCircle]);
 
